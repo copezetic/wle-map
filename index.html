@@ -48,6 +48,23 @@ header{position:fixed;left:0;right:0;top:0;z-index:5;padding:14px 20px 0;pointer
   border-bottom:1px solid rgba(141,154,151,.35);padding:8px 12px;font:500 17px var(--serif);color:var(--ink);cursor:pointer}
 #results button small{font:500 11px var(--sc);letter-spacing:.14em;color:var(--ink-soft);align-self:center}
 #results button:hover,#results button.on{background:var(--paper-2)}
+.hbtn{font:700 12px var(--sc);letter-spacing:.14em;color:var(--card);background:var(--ink);border:1px solid var(--ink);
+  border-radius:2px;padding:10px 13px 9px;cursor:pointer;white-space:nowrap}
+.hbtn:hover{background:#31434f}
+#panel .sec{font:700 11px var(--sc);letter-spacing:.24em;color:var(--ink-soft);margin:16px 0 0;padding-bottom:5px;border-bottom:2px solid var(--ink)}
+#panel .ev{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid rgba(141,154,151,.55)}
+#panel .ev .d{font:700 11px var(--sc);letter-spacing:.12em;color:var(--accent);text-align:center;line-height:1.15;padding-top:2px}
+#panel .ev .d b{display:block;font:700 23px/1 var(--serif);letter-spacing:0;color:var(--ink)}
+#panel .ev .d.wk{font-size:10.5px;padding-top:5px}
+#panel .ev h3{margin:0;font:700 18px/1.15 var(--serif)}
+#panel .ev p{margin:2px 0 0;font-size:15.5px;line-height:1.25;color:var(--ink-soft)}
+#panel .ev button{margin-top:3px;background:none;border:0;padding:0;font:italic 600 15px var(--serif);color:var(--ink);text-decoration:underline;cursor:pointer}
+#panel .tel{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(141,154,151,.55);font-size:17px}
+#panel .tel a{font-weight:700;color:var(--ink);white-space:nowrap}
+#panel .links{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+#panel .links a{font:600 12px var(--sc);letter-spacing:.1em;text-decoration:none;color:var(--ink);border:1px solid var(--rule);padding:8px 8px 7px;text-align:center}
+#panel .links a:hover{background:var(--paper-2)}
+#panel .fine{font:italic 500 14px var(--serif);color:var(--ink-soft);margin:12px 0 0}
 .chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 0;pointer-events:auto;width:fit-content}
 .chip{font:600 12px var(--sc);letter-spacing:.14em;color:var(--ink);background:rgba(247,242,230,.86);
   border:1px solid var(--rule);border-radius:999px;padding:6px 12px 5px;cursor:pointer;display:flex;align-items:center;gap:7px}
@@ -117,7 +134,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   .title h1{font-size:15px;letter-spacing:.1em}
   .title p{font-size:10px;letter-spacing:.16em}
   .tools{margin-left:0;width:100%}
-  .find{flex:1}.find input{width:100%;font-size:16px}
+  .find{flex:1;min-width:0}.find input{width:100%;font-size:16px}
+  .tools{gap:6px}.hbtn{padding:10px 9px 9px;font-size:11px;letter-spacing:.1em}.hbtn span{display:none}
   .chips{padding-top:8px;flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none}
   .chips::-webkit-scrollbar{display:none}
   .chip{white-space:nowrap;font-size:11px;padding:6px 10px 5px}
@@ -149,6 +167,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
         <input id="q" type="search" placeholder="Find a street or place…" autocomplete="off" spellcheck="false" aria-label="Find a street or place">
         <div id="results" role="listbox"></div>
       </div>
+      <button class="hbtn" id="bEvents">Events</button>
+      <button class="hbtn" id="bInfo">Numbers<span> &amp; Links</span></button>
     </div>
   </div>
   <div class="chips" id="chips"></div>
@@ -183,6 +203,7 @@ const CATS = {
   water:   {label:'Lakes & Marina',  c:'#5d7fa3'},
   play:    {label:'Courts & Fields', c:'#6f8a4a'},
   services:{label:'Services',        c:'#7a3b2e'},
+  trails:  {label:'Trails & Nature', c:'#9a7426'},
 };
 const small = matchMedia('(max-width:760px)').matches;
 const EDIT = new URLSearchParams(location.search).has('edit');
@@ -532,17 +553,51 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 function openPlace(p){
   for (const el of pinEls.values()) el.classList.remove('sel');
   pinEls.get(p.id)?.classList.add('sel');
-  const ll = [M.lat0 - p.z / M.kz, M.lon0 + p.x / M.kx];
+  const ll = [p.dlat ?? (M.lat0 - p.z / M.kz), p.dlon ?? (M.lon0 + p.x / M.kx)];
   panel.style.setProperty('--c', CATS[p.cat].c);
   panel.innerHTML = `<button class="x" aria-label="Close">×</button>
     <div class="kick"><i></i>${esc(CATS[p.cat].label)}</div><h2>${esc(p.name)}</h2><p>${esc(p.blurb || '')}</p>
     ${p.facts?.length ? `<dl>${p.facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join('')}</dl>` : ''}
-    <div class="acts">${p.url ? `<a class="btn pri" href="${esc(p.url)}" target="_blank" rel="noopener">WLE page</a>` : ''}
+    <div class="acts">${p.url ? `<a class="btn pri" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.urlLabel || 'WLE page')}</a>` : ''}
     <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${ll[0].toFixed(6)},${ll[1].toFixed(6)}" target="_blank" rel="noopener">Directions</a></div>`;
   panel.querySelector('.x').onclick = closePanel;
-  panel.classList.add('open');
+  panel.classList.add('open'); panel.scrollTop = 0;
   flyTo(p.x + (small ? 0 : 120), p.z + (small ? 140 : 0), 1500);
 }
+function openSheet(kick, title, html){
+  for (const el of pinEls.values()) el.classList.remove('sel');
+  panel.style.setProperty('--c', 'var(--accent)');
+  panel.innerHTML = `<button class="x" aria-label="Close">×</button><div class="kick"><i></i>${esc(kick)}</div><h2>${esc(title)}</h2>${html}`;
+  panel.querySelector('.x').onclick = closePanel;
+  panel.querySelectorAll('button[data-poi]').forEach(b => b.onclick = () => openPlace(D.pois.find(p => p.id === b.dataset.poi)));
+  panel.classList.add('open'); panel.scrollTop = 0;
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const venue = id => { const p = D.pois.find(p => p.id === id); return p ? `<button data-poi="${esc(id)}">${esc(p.name)} →</button>` : ''; };
+document.getElementById('bEvents').onclick = () => {
+  const E = D.events || {}, now = new Date(); const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const up = (E.dated || []).filter(e => e.date >= today);
+  const row = e => { const [y, m, d] = e.date.split('-').map(Number), dt = new Date(y, m-1, d);
+    return `<div class="ev"><div class="d">${DOW[dt.getDay()]}<b>${d}</b>${MON[m-1]}${y !== now.getFullYear() ? ' ’' + String(y).slice(2) : ''}</div><div><h3>${esc(e.title)}</h3><p>${esc(e.note || '')}</p>${venue(e.where)}</div></div>`; };
+  const chk = E.checked ? (() => { const [y, m, d] = E.checked.split('-').map(Number); return `${MON[m-1]} ${d}, ${y}`; })() : '';
+  openSheet('What’s on', 'Events',
+    `<div class="sec">Coming up</div>${up.length ? up.map(row).join('') : '<p class="fine">Nothing listed right now — check the WLE calendar.</p>'}
+     <div class="sec">Every week</div>${(E.weekly || []).map(e => `<div class="ev"><div class="d wk">${esc(e.when)}</div><div><h3>${esc(e.title)}</h3><p>${esc(e.note || '')}</p>${venue(e.where)}</div></div>`).join('')}
+     <p class="fine">Copied from the WLE activity sheet and Facebook page${chk ? ' on ' + chk : ''}. Dates and prices change — confirm before you go.</p>
+     <div class="links"><a href="https://wleonline.org/site/wle-calendar/" target="_blank" rel="noopener">WLE Calendar</a><a href="https://www.facebook.com/WallenpaupackLakeEstates" target="_blank" rel="noopener">WLE on Facebook</a></div>`);
+};
+document.getElementById('bInfo').onclick = () => {
+  const T = [['Any emergency', '911'], ['WLE Public Safety emergency', '570-689-7311'], ['Public Safety, after hours', '570-493-3198'], ['Administration Office', '570-689-4721'],
+    ['Water & sewer plant', '570-689-7007'], ['State Police', '570-253-7126'], ['PPL power outage', '1-800-342-5775']];
+  const L = [['WLE website', 'https://wleonline.org/site/'], ['Calendar', 'https://wleonline.org/site/wle-calendar/'], ['Web cam', 'https://wleonline.org/site/web-cam/'],
+    ['Newsletter', 'https://wleonline.org/site/community-newsletter/'], ['Make a payment', 'https://wleonline.org/site/make-a-payment/'], ['Forms', 'https://wleonline.org/site/forms/'],
+    ['Rules & regs', 'https://wleonline.org/site/general-rules-regs/'], ['Recycling days', 'https://wleonline.org/site/wle-recycling-days/'], ['Classifieds', 'https://wleonline.org/site/classifieds/'],
+    ['Places to eat', 'https://wleonline.org/site/places-to-eat/'], ['Photo album', 'https://wleonline.org/site/community-photo-album/'], ['WLE on Facebook', 'https://www.facebook.com/WallenpaupackLakeEstates']];
+  openSheet('Handy', 'Numbers & Links',
+    `<div class="sec">Phone</div>${T.map(t => `<div class="tel"><span>${esc(t[0])}</span><a href="tel:${t[1].replace(/[^0-9]/g, '')}">${t[1]}</a></div>`).join('')}
+     <div class="sec">Online</div><div class="links">${L.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
+     <p class="fine">Office hours: Monday–Saturday, 8:30 AM – 4:30 PM.</p>`);
+};
 function closePanel(){ panel.classList.remove('open'); for (const el of pinEls.values()) el.classList.remove('sel'); }
 addEventListener('keydown', e => { if (e.key === 'Escape'){ closePanel(); hideResults(); } });
 
@@ -628,7 +683,7 @@ function frame(now){
   controls.update();
   if (controls.target.y < 0) controls.target.y = 0;
   offTmp.copy(camera.position).sub(controls.target); sphTmp.setFromVector3(offTmp);
-  needle.setAttribute('transform', `rotate(${(sphTmp.theta * 180 / Math.PI).toFixed(1)} 30 30)`);
+  if (isFinite(sphTmp.theta)) needle.setAttribute('transform', `rotate(${(sphTmp.theta * 180 / Math.PI).toFixed(1)} 30 30)`);
   document.body.classList.toggle('far', sphTmp.radius > 3600);
   renderer.render(scene, camera);
   layout();
