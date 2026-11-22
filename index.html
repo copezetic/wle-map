@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wallenpaupack Lake Estates — A Neighbor's Map</title>
+<meta name="description" content="A 3D map of Wallenpaupack Lake Estates: pools, lakes, beaches, the marina, and every street. Made by a neighbor.">
+<meta property="og:title" content="Wallenpaupack Lake Estates — A Neighbor's Map">
+<meta property="og:description" content="A 3D map of the community: pools, lakes, beaches, the marina, and every street. Made by a neighbor.">
+<meta property="og:type" content="website">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Cormorant+SC:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f1eadb; --paper-2:#e9e0cc; --ink:#22303a; --ink-soft:#56636b; --rule:#8d9a97;
+  --accent:#7a3b2e; --water:#8fa9a8; --pine:#3f5a4a; --card:#f7f2e6;
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sc:'Cormorant SC','Cormorant Garamond',Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);overflow:hidden;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;touch-action:none}
+#stage{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 35%,#f6f0e3 0%,var(--paper) 55%,#e6dcc6 100%)}
+canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;cursor:grab}
+canvas#gl:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+/* ---------- masthead ---------- */
+header{position:fixed;left:0;right:0;top:0;z-index:5;padding:14px 20px 0;pointer-events:none}
+.mast{display:flex;align-items:flex-end;gap:16px;border-bottom:1px solid var(--rule);padding-bottom:10px}
+.mono{font-family:var(--sc);font-weight:700;font-size:30px;line-height:.9;letter-spacing:.02em;color:var(--ink);
+  padding-right:14px;border-right:1px solid var(--rule)}
+.title h1{margin:0;font-family:var(--sc);font-weight:600;font-size:21px;letter-spacing:.14em;line-height:1.1}
+.title p{margin:3px 0 0;font-family:var(--sc);font-size:12px;letter-spacing:.22em;color:var(--ink-soft)}
+.tools{margin-left:auto;display:flex;gap:10px;align-items:center;pointer-events:auto}
+.find{position:relative}
+.find input{font:500 17px var(--serif);color:var(--ink);background:var(--card);border:1px solid var(--rule);
+  border-radius:2px;padding:7px 12px 7px 32px;width:230px;outline:none}
+.find input::placeholder{color:#7d8a8a;font-style:italic}
+.find input:focus{border-color:var(--ink);box-shadow:0 0 0 3px rgba(34,48,58,.1)}
+.find svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.6}
+#results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--rule);
+  max-height:46vh;overflow:auto;display:none;box-shadow:0 10px 30px rgba(40,30,10,.18)}
+#results button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;
+  border-bottom:1px solid rgba(141,154,151,.35);padding:8px 12px;font:500 17px var(--serif);color:var(--ink);cursor:pointer}
+#results button small{font:500 11px var(--sc);letter-spacing:.14em;color:var(--ink-soft);align-self:center}
+#results button:hover,#results button.on{background:var(--paper-2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 0;pointer-events:auto;width:fit-content}
+.chip{font:600 12px var(--sc);letter-spacing:.14em;color:var(--ink);background:rgba(247,242,230,.86);
+  border:1px solid var(--rule);border-radius:999px;padding:6px 12px 5px;cursor:pointer;display:flex;align-items:center;gap:7px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c);display:block}
+.chip[aria-pressed="false"]{opacity:.45}
+
+/* ---------- labels ---------- */
+.lb{position:absolute;left:0;top:0;will-change:transform;white-space:nowrap}
+.lake{font:italic 600 19px var(--serif);color:#3d5a63;letter-spacing:.04em;transform-origin:0 0;
+  text-shadow:0 0 4px #dfe6dc,0 0 4px #dfe6dc,0 0 8px #dfe6dc}
+.lake.big{font-size:25px;letter-spacing:.1em}
+.pin{pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit;
+  display:flex;flex-direction:column;align-items:center}
+.pin .tag{font:600 15px var(--serif);background:var(--card);border:1px solid var(--ink);padding:1px 8px 2px;
+  box-shadow:2px 2px 0 rgba(34,48,58,.22);letter-spacing:.01em}
+.pin .stem{width:1px;height:16px;background:var(--ink)}
+.pin .dot{width:9px;height:9px;border-radius:50%;background:var(--c);border:1.5px solid var(--ink);margin-top:-1px}
+.pin.minor .tag{font-size:13px;font-style:italic;border-color:var(--ink-soft);box-shadow:none;background:rgba(247,242,230,.9)}
+.pin.minor .stem{height:10px;background:var(--ink-soft)}
+.pin:hover .tag,.pin.sel .tag{background:var(--ink);color:var(--card)}
+body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .stem{visibility:hidden}
+.pin .dot{position:relative}.pin .dot::after{content:'';position:absolute;inset:-12px;border-radius:50%}
+.lake.tuck{visibility:hidden}
+.pin.off{display:none}
+.found{display:flex;flex-direction:column;align-items:center}
+.found .tag{font:700 13px var(--sc);letter-spacing:.14em;background:var(--accent);color:#fbf4e4;padding:3px 9px 2px}
+.found .stem{width:1px;height:22px;background:var(--accent)}
+.found .ring{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent);margin-top:-8px;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2.6);opacity:0}}
+
+/* ---------- panel ---------- */
+#panel{position:fixed;z-index:6;right:20px;top:118px;width:340px;max-height:calc(100% - 190px);overflow:auto;
+  background:var(--card);border:1px solid var(--ink);box-shadow:6px 6px 0 rgba(34,48,58,.16);
+  padding:18px 20px 16px;transform:translateX(calc(100% + 40px));transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+#panel.open{transform:none}
+#panel .kick{font:600 11px var(--sc);letter-spacing:.24em;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+#panel .kick i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+#panel h2{margin:6px 0 8px;font:700 27px/1.05 var(--serif)}
+#panel p{margin:0 0 12px;font-size:17.5px;line-height:1.32}
+#panel dl{margin:0;border-top:2px solid var(--ink)}
+#panel dl div{display:grid;grid-template-columns:104px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid rgba(141,154,151,.55)}
+#panel dt{font:600 11px var(--sc);letter-spacing:.16em;color:var(--ink-soft);padding-top:4px}
+#panel dd{margin:0;font-size:16.5px;line-height:1.25}
+#panel .acts{display:flex;gap:8px;margin-top:14px}
+#panel a.btn{flex:1;text-align:center;font:600 12px var(--sc);letter-spacing:.14em;text-decoration:none;
+  padding:9px 8px 8px;border:1px solid var(--ink);color:var(--ink)}
+#panel a.btn.pri{background:var(--ink);color:var(--card)}
+#panel .x{position:absolute;right:8px;top:6px;width:34px;height:34px;border:0;background:none;font:400 26px var(--serif);
+  color:var(--ink-soft);cursor:pointer}
+
+/* ---------- footer bits ---------- */
+#hint{position:fixed;right:20px;bottom:14px;z-index:4;font:italic 500 15px var(--serif);color:var(--ink-soft);pointer-events:none}
+#credit{position:fixed;left:20px;bottom:12px;z-index:4;font:500 12.5px var(--serif);color:var(--ink-soft);max-width:56vw;line-height:1.3}
+#credit a{color:inherit}
+#compass{position:fixed;left:20px;bottom:58px;z-index:4;width:54px;height:54px;border:0;background:none;padding:0;cursor:pointer}
+#compass svg{width:100%;height:100%;display:block}
+#load{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--paper);transition:opacity .6s}
+#load span{font:italic 600 22px var(--serif);color:var(--ink-soft)}
+#load.done{opacity:0;pointer-events:none}
+#toast{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);z-index:9;background:var(--ink);color:var(--card);
+  font:500 14px ui-monospace,Menlo,monospace;padding:8px 12px;display:none;user-select:all;-webkit-user-select:all}
+
+@media (max-width:760px){
+  header{padding:10px 12px 0}
+  .mast{flex-wrap:wrap;gap:10px;padding-bottom:8px}
+  .mono{font-size:24px;padding-right:10px}
+  .title h1{font-size:15px;letter-spacing:.1em}
+  .title p{font-size:10px;letter-spacing:.16em}
+  .tools{margin-left:0;width:100%}
+  .find{flex:1}.find input{width:100%;font-size:16px}
+  .chips{padding-top:8px;flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;font-size:11px;padding:6px 10px 5px}
+  #panel{left:0;right:0;top:auto;bottom:0;width:auto;max-height:56%;border-width:1px 0 0;box-shadow:0 -8px 30px rgba(40,30,10,.2);
+    transform:translateY(105%);padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  #hint{display:none}
+  #credit{left:12px;right:12px;bottom:8px;max-width:none;font-size:11px}
+  #compass{left:12px;bottom:44px;width:46px;height:46px}
+  .pin .tag{font-size:14px}
+}
+</style>
+</head>
+<body class="far">
+<div id="stage">
+  <canvas id="gl" tabindex="0" aria-label="3D map of Wallenpaupack Lake Estates"></canvas>
+  <div id="labels"></div>
+</div>
+
+<header>
+  <div class="mast">
+    <div class="mono" aria-hidden="true">WLE</div>
+    <div class="title">
+      <h1>Wallenpaupack Lake Estates</h1>
+      <p>A Neighbor's Map · Lake Ariel, Pennsylvania</p>
+    </div>
+    <div class="tools">
+      <div class="find">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
+        <input id="q" type="search" placeholder="Find a street or place…" autocomplete="off" spellcheck="false" aria-label="Find a street or place">
+        <div id="results" role="listbox"></div>
+      </div>
+    </div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<aside id="panel" aria-live="polite"></aside>
+
+<button id="compass" title="Face north" aria-label="Face north">
+  <svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="#f7f2e6" stroke="#22303a" stroke-width="1"/>
+  <circle cx="30" cy="30" r="22" fill="none" stroke="#8d9a97" stroke-width=".6" stroke-dasharray="1 3"/>
+  <g id="needle"><path d="M30 6 L35 30 L30 27 L25 30 Z" fill="#7a3b2e"/><path d="M30 54 L35 30 L30 33 L25 30 Z" fill="#22303a" opacity=".55"/>
+  <text x="30" y="5" text-anchor="middle" font-family="Georgia,serif" font-size="8" font-weight="700" fill="#22303a" dy="-1"></text></g></svg>
+</button>
+<div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
+  Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
+<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin</div>
+<div id="toast"></div>
+<div id="load"><span>Drawing the map…</span></div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+
+const EX = 2.3;            // vertical exaggeration
+const DEPTH = 120;         // thickness of the earth block under the lowest point
+const CATS = {
+  pools:   {label:'Pools & Lodges',  c:'#3f7f8c'},
+  water:   {label:'Lakes & Marina',  c:'#5d7fa3'},
+  play:    {label:'Courts & Fields', c:'#6f8a4a'},
+  services:{label:'Services',        c:'#7a3b2e'},
+};
+const small = matchMedia('(max-width:760px)').matches;
+const EDIT = new URLSearchParams(location.search).has('edit');
+
+const D = await (await fetch('wle-data.json')).json();
+const M = D.meta, XS = M.xmax - M.xmin, ZS = M.zmax - M.zmin;
+
+/* ---------------- elevation ---------------- */
+const demRaw = Uint8Array.from(atob(D.dem), c => c.charCodeAt(0));
+const dem16 = new Uint16Array(demRaw.buffer);
+const DW = M.demW, DH = M.demH;
+const hAt = (i, j) => dem16[Math.min(DH-1, Math.max(0, j)) * DW + Math.min(DW-1, Math.max(0, i))] / 10;
+function height(x, z){           // metres above the lowest point, bilinear
+  const u = (x - M.xmin) / XS * (DW - 1), v = (z - M.zmin) / ZS * (DH - 1);
+  const i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+  return (hAt(i,j)*(1-fu) + hAt(i+1,j)*fu)*(1-fv) + (hAt(i,j+1)*(1-fu) + hAt(i+1,j+1)*fu)*fv;
+}
+const Y = (x, z) => height(x, z) * EX;
+
+/* ---------------- boundary helpers ---------------- */
+const B = D.boundary;
+function inside(x, z){
+  let c = false;
+  for (let i = 0, j = B.length - 1; i < B.length; j = i++){
+    const xi = B[i][0], zi = B[i][1], xj = B[j][0], zj = B[j][1];
+    if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c;
+  }
+  return c;
+}
+function nearestOnBoundary(x, z){
+  let bd = Infinity, bx = x, bz = z;
+  for (let i = 0; i < B.length - 1; i++){
+    const ax = B[i][0], az = B[i][1], dx = B[i+1][0] - ax, dz = B[i+1][1] - az;
+    const L = dx*dx + dz*dz; let t = L ? ((x-ax)*dx + (z-az)*dz) / L : 0; t = Math.max(0, Math.min(1, t));
+    const px = ax + dx*t, pz = az + dz*t, d = (px-x)**2 + (pz-z)**2;
+    if (d < bd){ bd = d; bx = px; bz = pz; }
+  }
+  return [bx, bz, Math.sqrt(bd)];
+}
+
+/* ---------------- the painted map (drawn once onto a canvas) ---------------- */
+function paintMap(){
+  const maxTex = small ? 2048 : 4096;
+  const TW = maxTex, TH = Math.round(TW * ZS / XS);
+  const cv = document.createElement('canvas'); cv.width = TW; cv.height = TH;
+  const g = cv.getContext('2d');
+  const S = TW / XS, px = x => (x - M.xmin) * S, pz = z => (z - M.zmin) * S;
+
+  // hill-shaded ground, computed at elevation resolution then scaled up
+  const sm = document.createElement('canvas'); sm.width = DW; sm.height = DH;
+  const sg = sm.getContext('2d'), im = sg.createImageData(DW, DH), cell = XS / DW;
+  const L = new THREE.Vector3(-1, 1.15, -1).normalize(), n = new THREE.Vector3();
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let j = 0; j < DH; j++) for (let i = 0; i < DW; i++){
+    const dzdx = (hAt(i+1,j) - hAt(i-1,j)) / (2*cell), dzdy = (hAt(i,j+1) - hAt(i,j-1)) / (2*cell);
+    n.set(-dzdx*5, 1, -dzdy*5).normalize();
+    const sh = 0.60 + 0.62 * Math.max(0, n.dot(L)) + (rnd() - .5) * .035;
+    const t = Math.min(1, hAt(i,j) / 100);                       // low = sage, high = straw
+    const o = (j*DW + i) * 4;
+    im.data[o]   = Math.min(255, (168 + 44*t) * sh);
+    im.data[o+1] = Math.min(255, (172 + 26*t) * sh);
+    im.data[o+2] = Math.min(255, (128 + 16*t) * sh);
+    im.data[o+3] = 255;
+  }
+  sg.putImageData(im, 0, 0);
+  g.imageSmoothingQuality = 'high'; g.drawImage(sm, 0, 0, TW, TH);
+
+  const ring = r => { r.forEach((p, i) => i ? g.lineTo(px(p[0]), pz(p[1])) : g.moveTo(px(p[0]), pz(p[1]))); g.closePath(); };
+  const line = r => { g.beginPath(); r.forEach((p, i) => i ? g.lineTo(px(p[0]), pz(p[1])) : g.moveTo(px(p[0]), pz(p[1]))); };
+  g.lineJoin = g.lineCap = 'round';
+
+  // soft areas
+  const AREA = {wetland:'rgba(120,150,130,.45)', park:'rgba(120,150,95,.5)', pitch:'rgba(128,158,96,.85)',
+                beach:'#e6d6a4', parking:'rgba(214,206,186,.9)', pool:'#6fb3c0'};
+  for (const f of D.features) if (AREA[f.k] && f.k !== 'pool'){
+    g.beginPath(); ring(f.p); g.fillStyle = AREA[f.k]; g.fill();
+    if (f.k === 'pitch' || f.k === 'beach'){ g.strokeStyle = 'rgba(60,70,50,.45)'; g.lineWidth = 1; g.stroke(); }
+  }
+  // streams
+  for (const f of D.features) if (f.k === 'stream'){ line(f.p); g.strokeStyle = '#7f9c9d'; g.lineWidth = Math.max(1.5, 3*S); g.stroke(); }
+
+  // water, with old-chart shore lines
+  for (const w of D.water){
+    g.beginPath(); ring(w.o); w.h.forEach(ring);
+    g.fillStyle = '#9db4b1'; g.fill('evenodd');
+    g.save(); g.clip('evenodd');
+    for (let k = 3; k >= 1; k--){
+      g.beginPath(); ring(w.o); w.h.forEach(ring);
+      g.strokeStyle = `rgba(232,238,228,${.16 + .07*(3-k)})`; g.lineWidth = k * 16 * S; g.stroke();
+    }
+    g.restore();
+    g.beginPath(); ring(w.o); w.h.forEach(ring);
+    g.strokeStyle = '#4f6f73'; g.lineWidth = Math.max(1, 1.6*S); g.stroke();
+  }
+  for (const f of D.features) if (f.k === 'pool'){
+    g.beginPath(); ring(f.p); g.fillStyle = AREA.pool; g.fill(); g.strokeStyle = '#f4efe2'; g.lineWidth = Math.max(1.5, 2.5*S); g.stroke();
+  }
+
+  // roads: casing first, then the pale fill
+  const WID = {main:11, street:7.5, lane:4.2, trail:2};
+  const order = ['trail','lane','street','main'];
+  for (const k of order) for (const r of D.roads) if (r.k === k && k !== 'trail'){
+    line(r.p); g.strokeStyle = 'rgba(70,72,52,.55)'; g.lineWidth = WID[k]*S + Math.max(1.6, 2*S); g.stroke();
+  }
+  for (const k of order) for (const r of D.roads) if (r.k === k){
+    line(r.p);
+    if (k === 'trail'){ g.setLineDash([5*S, 5*S]); g.strokeStyle = 'rgba(90,70,45,.7)'; }
+    else { g.setLineDash([]); g.strokeStyle = k === 'main' ? '#f6efdc' : '#efe7d2'; }
+    g.lineWidth = WID[k]*S; g.stroke();
+  }
+  g.setLineDash([]);
+
+  // street names, lettered along the longest stretch of each street
+  const byName = new Map();
+  for (const r of D.roads){
+    if (!r.n || r.k === 'trail') continue;
+    let len = 0; for (let i = 1; i < r.p.length; i++) len += Math.hypot(r.p[i][0]-r.p[i-1][0], r.p[i][1]-r.p[i-1][1]);
+    const cur = byName.get(r.n); if (!cur || len > cur.len) byName.set(r.n, {r, len});
+  }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const [name, {r, len}] of byName){
+    const fs = (r.k === 'main' ? 17 : 13.5) * S / 0.84 * (small ? 1.25 : 1);
+    g.font = `600 ${fs}px "Cormorant SC","Cormorant Garamond",Georgia,serif`;
+    const txt = name.toUpperCase().replace(/ DRIVE$/,' DR').replace(/ ROAD$/,' RD').replace(/ COURT$/,' CT').replace(/ TERRACE$/,' TER')
+      .replace(/ LANE$/,' LN').replace(/ AVENUE$/,' AVE').replace(/ CIRCLE$/,' CIR').replace(/ TRAIL$/,' TRL').replace(/ PLACE$/,' PL');
+    const wpx = g.measureText(txt).width * 1.12 / S;                 // metres the lettering needs
+    if (len < wpx * 0.7) continue;
+    // walk to the middle, take direction over the text's span
+    const at = d => { let acc = 0; for (let i = 1; i < r.p.length; i++){ const sl = Math.hypot(r.p[i][0]-r.p[i-1][0], r.p[i][1]-r.p[i-1][1]);
+      if (acc + sl >= d){ const t = (d - acc) / sl; return [r.p[i-1][0] + (r.p[i][0]-r.p[i-1][0])*t, r.p[i-1][1] + (r.p[i][1]-r.p[i-1][1])*t]; } acc += sl; } return r.p[r.p.length-1]; };
+    const a = at(Math.max(0, len/2 - wpx/2)), b = at(Math.min(len, len/2 + wpx/2)), m = at(len/2);
+    let ang = Math.atan2(b[1]-a[1], b[0]-a[0]); if (ang > Math.PI/2 || ang < -Math.PI/2) ang += Math.PI;
+    g.save(); g.translate(px(m[0]), pz(m[1])); g.rotate(ang);
+    try { g.letterSpacing = (fs * .12) + 'px'; } catch(e){}
+    g.lineWidth = fs * .34; g.strokeStyle = 'rgba(239,231,210,.92)'; g.strokeText(txt, 0, 0);
+    g.fillStyle = '#2b3a40'; g.fillText(txt, 0, 0);
+    g.restore();
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16; tex.generateMipmaps = true;
+  return tex;
+}
+
+/* ---------------- scene ---------------- */
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true, preserveDrawingBuffer: EDIT});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 20, 40000);
+await document.fonts.ready.catch(() => {});
+try { await Promise.all([document.fonts.load('600 14px "Cormorant SC"'), document.fonts.load('600 14px "Cormorant Garamond"')]); } catch(e){}
+const mapTex = paintMap();
+
+/* terrain cut to the community outline: grid points just outside are pulled onto the outline */
+const maxH = (() => { let m = 0; for (const v of dem16) if (v > m) m = v; return m / 10 * EX; })();
+function buildTerrain(){
+  const CELL = small ? 16 : 11;
+  const nx = Math.round(XS / CELL) + 1, nz = Math.round(ZS / CELL) + 1, N = nx * nz;
+  const X = new Float32Array(N), Z = new Float32Array(N), st = new Uint8Array(N);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++){
+    const k = j*nx + i; X[k] = M.xmin + XS * i / (nx-1); Z[k] = M.zmin + ZS * j / (nz-1);
+    st[k] = inside(X[k], Z[k]) ? 1 : 0;
+  }
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++){
+    const k = j*nx + i; if (st[k]) continue;
+    let near = false;
+    for (let dj = -1; dj <= 1 && !near; dj++) for (let di = -1; di <= 1; di++){
+      const a = i+di, b = j+dj; if (a>=0 && b>=0 && a<nx && b<nz && st[b*nx+a] === 1){ near = true; break; }
+    }
+    if (!near) continue;
+    const [bx, bz, d] = nearestOnBoundary(X[k], Z[k]);
+    if (d < CELL * 1.6){ X[k] = bx; Z[k] = bz; st[k] = 2; }
+  }
+  const remap = new Int32Array(N).fill(-1), pos = [], uv = [], idx = [];
+  const vid = k => { if (remap[k] < 0){ remap[k] = pos.length / 3; pos.push(X[k], Y(X[k], Z[k]), Z[k]);
+    uv.push((X[k]-M.xmin)/XS, 1 - (Z[k]-M.zmin)/ZS); } return remap[k]; };
+  const edges = new Map();
+  const tri = (a, b, c) => {
+    if (!st[a] || !st[b] || !st[c]) return;
+    if (st[a] !== 1 && st[b] !== 1 && st[c] !== 1) return;
+    const A = vid(a), Bv = vid(b), C = vid(c); idx.push(A, Bv, C);
+    for (const [p, q] of [[A,Bv],[Bv,C],[C,A]]){ const key = p < q ? p*1e6+q : q*1e6+p; const e = edges.get(key);
+      if (e) e.n++; else edges.set(key, {n:1, p, q}); }
+  };
+  for (let j = 0; j < nz-1; j++) for (let i = 0; i < nx-1; i++){
+    const a = j*nx+i, b = a+1, c = a+nx, d = c+1; tri(a, c, b); tri(b, c, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  const top = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map: mapTex}));
+
+  // the cut sides of the block, banded like a slice of earth
+  const sp = [], suv = [], scol = [], sidx = [];
+  const Ld = new THREE.Vector2(-0.6, -0.8).normalize();
+  for (const e of edges.values()){
+    if (e.n !== 1) continue;
+    const ax = pos[e.p*3], ay = pos[e.p*3+1], az = pos[e.p*3+2], bx = pos[e.q*3], by = pos[e.q*3+1], bz = pos[e.q*3+2];
+    let nxn = bz - az, nzn = -(bx - ax); const l = Math.hypot(nxn, nzn) || 1; nxn /= l; nzn /= l;
+    const mx = (ax+bx)/2 + nxn*4, mz = (az+bz)/2 + nzn*4; if (inside(mx, mz)){ nxn = -nxn; nzn = -nzn; }
+    const sh = 0.72 + 0.28 * Math.max(0, nxn*Ld.x*-1 + nzn*Ld.y*-1) + 0.12 * Math.max(0, nzn);
+    const o = sp.length / 3;
+    sp.push(ax, ay, az, bx, by, bz, ax, -DEPTH, az, bx, -DEPTH, bz);
+    const ua = (ax + az) / 260, ub = (bx + bz) / 260;
+    suv.push(ua, (ay + DEPTH)/(maxH + DEPTH), ub, (by + DEPTH)/(maxH + DEPTH), ua, 0, ub, 0);
+    for (let k = 0; k < 4; k++) scol.push(sh, sh, sh);
+    sidx.push(o, o+2, o+1, o+1, o+2, o+3);
+  }
+  const sc = document.createElement('canvas'); sc.width = 256; sc.height = 512; const sg = sc.getContext('2d');
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  let y = 0; const tones = ['#6b4a2e','#7a5636','#5d3f27','#86623f','#70502f','#93704a','#664629'];
+  while (y < 512){ const h = 5 + rnd()*26; sg.fillStyle = tones[Math.floor(rnd()*tones.length)]; sg.fillRect(0, y, 256, h + 1); y += h; }
+  for (let k = 0; k < 2600; k++){ sg.fillStyle = `rgba(${rnd() > .5 ? '255,235,200' : '30,18,8'},${.05 + rnd()*.09})`; sg.fillRect(rnd()*256, rnd()*512, 1 + rnd()*14, 1); }
+  const grd = sg.createLinearGradient(0, 0, 0, 512); grd.addColorStop(0, 'rgba(120,110,70,.55)'); grd.addColorStop(.06, 'rgba(0,0,0,0)');
+  grd.addColorStop(.7, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(20,10,0,.45)'); sg.fillStyle = grd; sg.fillRect(0, 0, 256, 512);
+  const stex = new THREE.CanvasTexture(sc); stex.wrapS = THREE.RepeatWrapping; stex.colorSpace = THREE.SRGBColorSpace;
+  const sgeo = new THREE.BufferGeometry();
+  sgeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+  sgeo.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2));
+  sgeo.setAttribute('color', new THREE.Float32BufferAttribute(scol, 3));
+  sgeo.setIndex(sidx);
+  const side = new THREE.Mesh(sgeo, new THREE.MeshBasicMaterial({map: stex, vertexColors: true, side: THREE.DoubleSide}));
+  return {top, side};
+}
+const {top: terrain, side} = buildTerrain();
+scene.add(terrain, side);
+
+/* houses: little extruded blocks */
+(function houses(){
+  const pos = [], col = [], idx = [];
+  const roof = new THREE.Color('#f3ecd9'), roofB = new THREE.Color('#d9c9a8');
+  for (const b of D.buildings){
+    const p = b.p; if (p.length < 3) continue;
+    let cx = 0, cz = 0; for (const q of p){ cx += q[0]; cz += q[1]; } cx /= p.length; cz /= p.length;
+    if (!inside(cx, cz)) continue;
+    let lo = Infinity, hi = -Infinity; for (const q of p){ const y = Y(q[0], q[1]); if (y < lo) lo = y; if (y > hi) hi = y; }
+    const topY = hi + Math.min(8, Math.max(4, b.h)) * 1.25, o = pos.length / 3, n = p.length;
+    const rc = ((p[0][0]*7 + p[0][1]*13) % 5 + 5) % 5 < 2 ? roofB : roof;
+    for (const q of p){ pos.push(q[0], topY, q[1]); col.push(rc.r, rc.g, rc.b); }
+    const tris = THREE.ShapeUtils.triangulateShape(p.map(q => new THREE.Vector2(q[0], q[1])), []);
+    for (const t of tris) idx.push(o + t[0], o + t[1], o + t[2]);
+    for (let i = 0; i < n; i++){
+      const a = p[i], c = p[(i+1) % n], w = pos.length / 3;
+      let nxn = c[1] - a[1], nzn = -(c[0] - a[0]); const l = Math.hypot(nxn, nzn) || 1; nxn /= l; nzn /= l;
+      const lit = Math.abs(nxn * -0.6 + nzn * -0.8), s = 0.50 + 0.32 * lit;
+      pos.push(a[0], topY, a[1], c[0], topY, c[1], a[0], lo - 1, a[1], c[0], lo - 1, c[1]);
+      for (let k = 0; k < 4; k++) col.push(.86*s, .80*s, .68*s);
+      idx.push(w, w+2, w+1, w+1, w+2, w+3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide})));
+})();
+
+/* soft shadow on the "table" */
+(function shadow(){
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const r = g.createRadialGradient(128, 128, 20, 128, 128, 128);
+  r.addColorStop(0, 'rgba(70,50,20,.42)'); r.addColorStop(.55, 'rgba(70,50,20,.2)'); r.addColorStop(1, 'rgba(70,50,20,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 256, 256);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(XS * 1.25, ZS * 1.55),
+    new THREE.MeshBasicMaterial({map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false}));
+  m.rotation.x = -Math.PI / 2; m.position.set(60, -DEPTH - 2, 120); m.renderOrder = -1; scene.add(m);
+})();
+
+/* ---------------- camera + controls ---------------- */
+const controls = new MapControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = .09;
+controls.minDistance = 160; controls.maxDistance = 9500; controls.maxPolarAngle = Math.PI * .47;
+controls.zoomSpeed = 1.1; controls.rotateSpeed = .5;
+const bx = B.map(p => p[0]), bz = B.map(p => p[1]);
+const cx0 = (Math.min(...bx) + Math.max(...bx)) / 2, cz0 = (Math.min(...bz) + Math.max(...bz)) / 2 + 150;
+const aspect0 = innerWidth / innerHeight;
+const HOME = {t: new THREE.Vector3(cx0, 60, cz0), az: aspect0 < 1 ? -1.05 : -0.3, pol: 0.86, d: aspect0 < 1 ? 12200 : Math.max(6400, 9600 / aspect0)};
+function place(t, az, pol, d){
+  controls.target.copy(t);
+  camera.position.set(t.x + d*Math.sin(pol)*Math.sin(az), t.y + d*Math.cos(pol), t.z + d*Math.sin(pol)*Math.cos(az));
+  camera.lookAt(t);
+}
+place(HOME.t, HOME.az, HOME.pol, HOME.d);
+let fly = null;
+function flyTo(x, z, d, az){
+  const t1 = new THREE.Vector3(x, Y(x, z), z);
+  const off = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(off);
+  fly = {t0: controls.target.clone(), t1, d0: sph.radius, d1: d ?? sph.radius, a0: sph.theta, a1: az ?? sph.theta,
+         p0: sph.phi, p1: Math.min(1.0, Math.max(.78, sph.phi)), s: performance.now(), ms: 1100};
+  let da = fly.a1 - fly.a0; while (da > Math.PI) da -= 2*Math.PI; while (da < -Math.PI) da += 2*Math.PI; fly.a1 = fly.a0 + da;
+}
+canvas.addEventListener('pointerdown', () => { fly = null; });
+canvas.addEventListener('wheel', () => { fly = null; }, {passive: true});
+
+/* ---------------- labels & pins ---------------- */
+const layer = document.getElementById('labels'), items = [];
+function addLabel(el, x, z, lift = 0, anchor = 'bottom'){ layer.appendChild(el); const it = {el, v: new THREE.Vector3(x, Y(x, z) + lift, z), anchor, w: 0, h: 0}; items.push(it); return it; }
+for (const l of D.lakes){
+  const el = document.createElement('div'); el.className = 'lb lake' + (l.a > 300000 ? ' big' : ''); el.textContent = l.n;
+  addLabel(el, l.x, l.z, 2, 'center');
+}
+const pinEls = new Map();
+for (const p of D.pois){
+  const el = document.createElement('button'); el.className = 'lb pin' + (p.major ? '' : ' minor'); el.style.setProperty('--c', CATS[p.cat].c);
+  el.innerHTML = `<span class="tag"></span><span class="stem"></span><span class="dot"></span>`; el.firstChild.textContent = p.name;
+  el.addEventListener('click', e => { e.stopPropagation(); openPlace(p); });
+  pinEls.set(p.id, el); addLabel(el, p.x, p.z, 6).poi = p;
+}
+let foundIt = null;
+function markFound(name, x, z){
+  if (foundIt){ foundIt.el.remove(); items.splice(items.indexOf(foundIt), 1); }
+  const el = document.createElement('div'); el.className = 'lb found';
+  el.innerHTML = `<span class="tag"></span><span class="stem"></span><span class="ring"></span>`; el.firstChild.textContent = name;
+  foundIt = addLabel(el, x, z, 4); foundIt.ring = true;
+}
+const v = new THREE.Vector3();
+function layout(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  for (const it of items){
+    v.copy(it.v).project(camera);
+    it.shown = false;
+    if (v.z > 1 || v.x < -1.15 || v.x > 1.15 || v.y < -1.2 || v.y > 1.2){ it.el.style.visibility = 'hidden'; continue; }
+    it.el.style.visibility = '';
+    if (!it.w){ it.w = it.el.offsetWidth; it.h = it.el.offsetHeight; }
+    const sx = (v.x * .5 + .5) * w, sy = (-v.y * .5 + .5) * h;
+    const dy = it.anchor === 'center' ? it.h / 2 : it.ring ? it.h - 8 : it.h - 4;
+    it.el.style.transform = `translate(${Math.round(sx - it.w / 2)}px,${Math.round(sy - dy)}px)`;
+    it.r = [sx - it.w / 2 - 3, sy - dy - 2, sx + it.w / 2 + 3, sy - dy + (it.poi ? it.h - 22 : it.h) + 2];
+    it.shown = true;
+  }
+  // keep name tags from piling up: the more important one keeps its tag, the other shrinks to its dot
+  const far = document.body.classList.contains('far'), kept = [];
+  const rank = it => it.ring ? 0 : it.poi ? (it.el.classList.contains('sel') ? 1 : it.poi.major ? 2 : 3) : 4;
+  const live = items.filter(it => it.shown && it.el.style.visibility !== 'hidden' && !it.el.classList.contains('off')).sort((a, b) => rank(a) - rank(b));
+  for (const it of live){
+    if (it.poi && !it.poi.major && far){ it.el.classList.remove('tuck'); continue; }
+    const hit = kept.some(k => it.r[0] < k[2] && it.r[2] > k[0] && it.r[1] < k[3] && it.r[3] > k[1]);
+    it.el.classList.toggle('tuck', hit && !it.ring);
+    if (!hit || it.ring) kept.push(it.r);
+  }
+}
+
+/* ---------------- panel ---------------- */
+const panel = document.getElementById('panel');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function openPlace(p){
+  for (const el of pinEls.values()) el.classList.remove('sel');
+  pinEls.get(p.id)?.classList.add('sel');
+  const ll = [M.lat0 - p.z / M.kz, M.lon0 + p.x / M.kx];
+  panel.style.setProperty('--c', CATS[p.cat].c);
+  panel.innerHTML = `<button class="x" aria-label="Close">×</button>
+    <div class="kick"><i></i>${esc(CATS[p.cat].label)}</div><h2>${esc(p.name)}</h2><p>${esc(p.blurb || '')}</p>
+    ${p.facts?.length ? `<dl>${p.facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join('')}</dl>` : ''}
+    <div class="acts">${p.url ? `<a class="btn pri" href="${esc(p.url)}" target="_blank" rel="noopener">WLE page</a>` : ''}
+    <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${ll[0].toFixed(6)},${ll[1].toFixed(6)}" target="_blank" rel="noopener">Directions</a></div>`;
+  panel.querySelector('.x').onclick = closePanel;
+  panel.classList.add('open');
+  flyTo(p.x + (small ? 0 : 120), p.z + (small ? 140 : 0), 1500);
+}
+function closePanel(){ panel.classList.remove('open'); for (const el of pinEls.values()) el.classList.remove('sel'); }
+addEventListener('keydown', e => { if (e.key === 'Escape'){ closePanel(); hideResults(); } });
+
+/* ---------------- filter chips ---------------- */
+const chips = document.getElementById('chips'), hidden = new Set();
+for (const [k, c] of Object.entries(CATS)){
+  const b = document.createElement('button'); b.className = 'chip'; b.style.setProperty('--c', c.c); b.setAttribute('aria-pressed', 'true');
+  b.innerHTML = `<i></i>${esc(c.label)}`;
+  b.onclick = () => { hidden.has(k) ? hidden.delete(k) : hidden.add(k); b.setAttribute('aria-pressed', String(!hidden.has(k)));
+    for (const p of D.pois) pinEls.get(p.id).classList.toggle('off', hidden.has(p.cat)); };
+  chips.appendChild(b);
+}
+
+/* ---------------- find a street or place ---------------- */
+const streets = new Map();
+for (const r of D.roads){
+  if (!r.n || !r.in) continue;
+  const s = streets.get(r.n) || {n: r.n, segs: []}; s.segs.push(r.p); streets.set(r.n, s);
+}
+const index = [...D.pois.map(p => ({n: p.name, kind: 'Place', p})),
+  ...[...streets.values()].sort((a, b) => a.n.localeCompare(b.n)).map(s => ({n: s.n, kind: 'Street', s}))];
+const q = document.getElementById('q'), results = document.getElementById('results'); let cur = -1, shown = [];
+function hideResults(){ results.style.display = 'none'; cur = -1; }
+function showResults(){
+  const t = q.value.trim().toLowerCase();
+  shown = (t ? index.filter(e => e.n.toLowerCase().includes(t)) : index.filter(e => e.kind === 'Place'))
+    .sort((a, b) => (b.n.toLowerCase().startsWith(t) - a.n.toLowerCase().startsWith(t))).slice(0, 40);
+  results.innerHTML = shown.length ? shown.map((e, i) => `<button role="option" data-i="${i}">${esc(e.n)}<small>${e.kind}</small></button>`).join('')
+    : `<button disabled>No match in the Estates</button>`;
+  results.style.display = 'block'; cur = -1;
+}
+function pick(e){
+  hideResults(); q.blur(); q.value = e.n;
+  if (e.p) return openPlace(e.p);
+  closePanel();
+  // midpoint of the longest piece, and a zoom that takes in the whole street
+  let best = null, bl = -1, x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const seg of e.s.segs){ let len = 0; for (let i = 1; i < seg.length; i++) len += Math.hypot(seg[i][0]-seg[i-1][0], seg[i][1]-seg[i-1][1]);
+    if (len > bl){ bl = len; best = seg; } for (const p of seg){ x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); } }
+  const m = best[Math.floor(best.length / 2)];
+  markFound(e.n, m[0], m[1]);
+  flyTo((x0+x1)/2, (z0+z1)/2, Math.max(1100, Math.hypot(x1-x0, z1-z0) * 2.6));
+}
+q.addEventListener('input', showResults); q.addEventListener('focus', showResults);
+q.addEventListener('keydown', e => {
+  const bs = [...results.querySelectorAll('button[data-i]')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); cur = (cur + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length;
+    bs.forEach((b, i) => b.classList.toggle('on', i === cur)); bs[cur]?.scrollIntoView({block: 'nearest'}); }
+  if (e.key === 'Enter' && shown.length) pick(shown[Math.max(0, cur)]);
+});
+results.addEventListener('pointerdown', e => { const b = e.target.closest('button[data-i]'); if (b){ e.preventDefault(); pick(shown[+b.dataset.i]); } });
+canvas.addEventListener('pointerdown', hideResults);
+
+/* ---------------- compass ---------------- */
+const needle = document.getElementById('needle');
+document.getElementById('compass').onclick = () => flyTo(controls.target.x, controls.target.z, undefined, 0);
+
+/* ---------------- edit helper: add ?edit to the address, click the map, copy the coordinates ---------------- */
+if (EDIT){
+  const ray = new THREE.Raycaster(), toast = document.getElementById('toast'); let down = null;
+  canvas.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+  canvas.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+    ray.setFromCamera(new THREE.Vector2(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+    const hit = ray.intersectObject(terrain)[0]; if (!hit) return;
+    toast.textContent = `"lat": ${(M.lat0 - hit.point.z / M.kz).toFixed(6)}, "lon": ${(M.lon0 + hit.point.x / M.kx).toFixed(6)}`;
+    toast.style.display = 'block';
+  });
+}
+
+/* ---------------- loop ---------------- */
+function resize(){ const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  for (const it of items) it.w = 0; }
+addEventListener('resize', resize); resize();
+const sphTmp = new THREE.Spherical(), offTmp = new THREE.Vector3();
+function frame(now){
+  if (fly){
+    let k = Math.min(1, (now - fly.s) / fly.ms); k = k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3) / 2;
+    const t = fly.t0.clone().lerp(fly.t1, k);
+    place(t, fly.a0 + (fly.a1 - fly.a0) * k, fly.p0 + (fly.p1 - fly.p0) * k, fly.d0 + (fly.d1 - fly.d0) * k);
+    if (k >= 1) fly = null;
+  }
+  controls.update();
+  if (controls.target.y < 0) controls.target.y = 0;
+  offTmp.copy(camera.position).sub(controls.target); sphTmp.setFromVector3(offTmp);
+  needle.setAttribute('transform', `rotate(${(sphTmp.theta * 180 / Math.PI).toFixed(1)} 30 30)`);
+  document.body.classList.toggle('far', sphTmp.radius > 3600);
+  renderer.render(scene, camera);
+  layout();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+{ const ld = document.getElementById('load'); ld.classList.add('done'); setTimeout(() => ld.remove(), 900); }
+window.__wle = {camera, controls, flyTo, place, HOME, THREE};
+</script>
+</body>
+</html>
