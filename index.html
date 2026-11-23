@@ -231,7 +231,7 @@ const CATS = {
 const small = matchMedia('(max-width:760px)').matches;
 const EDIT = new URLSearchParams(location.search).has('edit');
 
-const D = await (await fetch('wle-data.json')).json();
+const D = await (await fetch('wle-data.json', { cache: 'no-cache' })).json();
 const M = D.meta, XS = M.xmax - M.xmin, ZS = M.zmax - M.zmin;
 
 /* ---------------- elevation ---------------- */
