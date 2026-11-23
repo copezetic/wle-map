@@ -119,11 +119,29 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 #hint{position:fixed;right:20px;bottom:14px;z-index:4;font:italic 500 15px var(--serif);color:var(--ink-soft);pointer-events:none}
 #credit{position:fixed;left:20px;bottom:12px;z-index:4;font:500 12.5px var(--serif);color:var(--ink-soft);max-width:56vw;line-height:1.3}
 #credit a{color:inherit}
+#locate{position:fixed;left:20px;bottom:122px;z-index:4;width:54px;height:54px;border-radius:50%;border:1px solid var(--ink);
+  background:var(--card);cursor:pointer;display:grid;place-items:center;padding:0;color:var(--ink)}
+#locate.on{background:var(--ink);color:var(--card)}
+#locate svg{width:24px;height:24px}
+.me{width:18px;height:18px;border-radius:50%;background:#2f6fd0;border:3px solid #fff;box-shadow:0 0 0 1px rgba(20,40,80,.5),0 2px 6px rgba(0,0,0,.35);position:relative}
+.me::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid #2f6fd0;animation:pulse 2s ease-out infinite}
+#panel img.ph{display:block;width:calc(100% + 40px);margin:-18px -20px 14px;height:170px;object-fit:cover;border-bottom:1px solid var(--ink)}
+#panel .cred{font:italic 500 12.5px var(--serif);color:var(--ink-soft);margin:-8px 0 10px}
+#panel .steps{margin:0;padding:0;list-style:none;border-top:2px solid var(--ink)}
+#panel .steps li{display:grid;grid-template-columns:26px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid rgba(141,154,151,.55);font-size:17px;line-height:1.2;align-items:baseline}
+#panel .steps li b{font:700 12px var(--sc);letter-spacing:.08em;color:var(--accent)}
+#panel .steps li span{font:600 12px var(--sc);letter-spacing:.1em;color:var(--ink-soft);white-space:nowrap}
+#panel .big{font:700 25px/1.1 var(--serif);margin:2px 0 10px}
+#panel .big small{font:500 16px var(--serif);color:var(--ink-soft)}
+#panel button.btn{flex:1;font:600 12px var(--sc);letter-spacing:.14em;padding:9px 8px 8px;border:1px solid var(--ink);color:var(--ink);background:none;cursor:pointer}
+#panel button.btn.pri{background:var(--ink);color:var(--card)}
+#panel .acts{flex-wrap:wrap}
 #compass{position:fixed;left:20px;bottom:58px;z-index:4;width:54px;height:54px;border:0;background:none;padding:0;cursor:pointer}
 #compass svg{width:100%;height:100%;display:block}
 #load{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--paper);transition:opacity .6s}
 #load span{font:italic 600 22px var(--serif);color:var(--ink-soft)}
 #load.done{opacity:0;pointer-events:none}
+#toast.msg{font:500 16px var(--serif);user-select:none;-webkit-user-select:none;max-width:86vw;text-align:center}
 #toast{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);z-index:9;background:var(--ink);color:var(--card);
   font:500 14px ui-monospace,Menlo,monospace;padding:8px 12px;display:none;user-select:all;-webkit-user-select:all}
 
@@ -144,6 +162,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   #hint{display:none}
   #credit{left:12px;right:12px;bottom:8px;max-width:none;font-size:11px}
   #compass{left:12px;bottom:44px;width:46px;height:46px}
+  #locate{left:12px;bottom:98px;width:46px;height:46px}
+  #panel.route{max-height:42%}
   .pin .tag{font-size:14px}
 }
 </style>
@@ -176,6 +196,9 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 
 <aside id="panel" aria-live="polite"></aside>
 
+<button id="locate" title="Show where I am" aria-label="Show where I am">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>
+</button>
 <button id="compass" title="Face north" aria-label="Face north">
   <svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="#f7f2e6" stroke="#22303a" stroke-width="1"/>
   <circle cx="30" cy="30" r="22" fill="none" stroke="#8d9a97" stroke-width=".6" stroke-dasharray="1 3"/>
@@ -556,10 +579,13 @@ function openPlace(p){
   const ll = [p.dlat ?? (M.lat0 - p.z / M.kz), p.dlon ?? (M.lon0 + p.x / M.kx)];
   panel.style.setProperty('--c', CATS[p.cat].c);
   panel.innerHTML = `<button class="x" aria-label="Close">×</button>
-    <div class="kick"><i></i>${esc(CATS[p.cat].label)}</div><h2>${esc(p.name)}</h2><p>${esc(p.blurb || '')}</p>
+    ${p.photo ? `<img class="ph" src="${esc(p.photo)}" alt="${esc(p.name)}" loading="lazy">` : ''}
+    <div class="kick"><i></i>${esc(CATS[p.cat].label)}</div><h2>${esc(p.name)}</h2>
+    ${p.photo && p.photoCredit ? `<div class="cred">Photo: ${esc(p.photoCredit)}</div>` : ''}<p>${esc(p.blurb || '')}</p>
     ${p.facts?.length ? `<dl>${p.facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join('')}</dl>` : ''}
-    <div class="acts">${p.url ? `<a class="btn pri" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.urlLabel || 'WLE page')}</a>` : ''}
-    <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${ll[0].toFixed(6)},${ll[1].toFixed(6)}" target="_blank" rel="noopener">Directions</a></div>`;
+    <div class="acts">${p.outside ? '' : '<button class="btn pri" id="goRoute">Route on this map</button>'}${p.url ? `<a class="btn" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.urlLabel || 'WLE page')}</a>` : ''}
+    <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${ll[0].toFixed(6)},${ll[1].toFixed(6)}" target="_blank" rel="noopener">Google Maps</a></div>`;
+  panel.classList.remove('route'); const gr = panel.querySelector('#goRoute'); if (gr) gr.onclick = () => routeTo(p);
   panel.querySelector('.x').onclick = closePanel;
   panel.classList.add('open'); panel.scrollTop = 0;
   flyTo(p.x + (small ? 0 : 120), p.z + (small ? 140 : 0), 1500);
@@ -569,6 +595,7 @@ function openSheet(kick, title, html){
   panel.style.setProperty('--c', 'var(--accent)');
   panel.innerHTML = `<button class="x" aria-label="Close">×</button><div class="kick"><i></i>${esc(kick)}</div><h2>${esc(title)}</h2>${html}`;
   panel.querySelector('.x').onclick = closePanel;
+  panel.classList.remove('route');
   panel.querySelectorAll('button[data-poi]').forEach(b => b.onclick = () => openPlace(D.pois.find(p => p.id === b.dataset.poi)));
   panel.classList.add('open'); panel.scrollTop = 0;
 }
@@ -598,7 +625,7 @@ document.getElementById('bInfo').onclick = () => {
      <div class="sec">Online</div><div class="links">${L.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
      <p class="fine">Office hours: Monday–Saturday, 8:30 AM – 4:30 PM.</p>`);
 };
-function closePanel(){ panel.classList.remove('open'); for (const el of pinEls.values()) el.classList.remove('sel'); }
+function closePanel(){ clearRoute(); panel.classList.remove('open', 'route'); for (const el of pinEls.values()) el.classList.remove('sel'); }
 addEventListener('keydown', e => { if (e.key === 'Escape'){ closePanel(); hideResults(); } });
 
 /* ---------------- filter chips ---------------- */
@@ -651,6 +678,127 @@ q.addEventListener('keydown', e => {
 results.addEventListener('pointerdown', e => { const b = e.target.closest('button[data-i]'); if (b){ e.preventDefault(); pick(shown[+b.dataset.i]); } });
 canvas.addEventListener('pointerdown', hideResults);
 
+/* ---------------- where am I ---------------- */
+const toastEl = document.getElementById('toast'); let toastT = 0;
+function say(msg){ toastEl.className = 'msg'; toastEl.textContent = msg; toastEl.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => toastEl.style.display = 'none', 5200); }
+const toXZ = (lat, lon) => [(lon - M.lon0) * M.kx, -(lat - M.lat0) * M.kz];
+const onMap = (x, z) => x > M.xmin && x < M.xmax && z > M.zmin && z < M.zmax;
+let me = null, meIt = null, watchId = null, firstFix = true;
+const locBtn = document.getElementById('locate');
+function gotFix(lat, lon){
+  const [x, z] = toXZ(lat, lon);
+  if (!onMap(x, z)){ me = null; if (meIt){ meIt.el.remove(); items.splice(items.indexOf(meIt), 1); meIt = null; }
+    if (firstFix) say('You look to be outside the Estates — routes will start from the Main Entrance.'); firstFix = false; return; }
+  const moved = me ? Math.hypot(x - me[0], z - me[1]) : Infinity; me = [x, z];
+  if (!meIt){ const el = document.createElement('div'); el.className = 'lb me'; meIt = addLabel(el, x, z, 3, 'center'); meIt.ring = true; }
+  meIt.v.set(x, Y(x, z) + 3, z);
+  if (firstFix){ firstFix = false; if (!routeDest) flyTo(x, z, 1300); }
+  if (routeDest && (!routeFromMe || moved > 30)) routeTo(routeDest, routeFromMe);
+}
+function startLocate(quiet){
+  if (watchId !== null){ if (me && !quiet) flyTo(me[0], me[1], 1300); return; }
+  if (!navigator.geolocation){ if (!quiet) say('This browser can’t share your location.'); return; }
+  locBtn.classList.add('on'); firstFix = true;
+  watchId = navigator.geolocation.watchPosition(p => gotFix(p.coords.latitude, p.coords.longitude),
+    e => { locBtn.classList.remove('on'); navigator.geolocation.clearWatch(watchId); watchId = null;
+      say(e.code === 1 ? 'Location is switched off for this page — allow it in your browser settings to see where you are.' : 'Couldn’t get your location just now.'); },
+    {enableHighAccuracy: true, maximumAge: 5000, timeout: 20000});
+}
+locBtn.onclick = () => startLocate(false);
+
+/* ---------------- directions along the Estates' own roads ---------------- */
+const G = new Map();                       // "x,z" -> {x, z, e:[{to, len, w, name}]}
+(function buildGraph(){
+  const node = (x, z) => { const k = x.toFixed(1) + ',' + z.toFixed(1); let n = G.get(k); if (!n){ n = {k, x, z, e: []}; G.set(k, n); } return n; };
+  for (const r of D.roads){
+    if (r.k === 'trail') continue;
+    const cost = r.k === 'lane' ? 1.5 : r.k === 'main' ? 0.95 : 1;
+    for (let i = 1; i < r.p.length; i++){
+      const a = r.p[i-1], b = r.p[i], L = Math.hypot(b[0]-a[0], b[1]-a[1]), parts = Math.max(1, Math.ceil(L / 25));
+      let prev = node(a[0], a[1]);
+      for (let s = 1; s <= parts; s++){
+        const cur = s === parts ? node(b[0], b[1]) : node(a[0] + (b[0]-a[0]) * s / parts, a[1] + (b[1]-a[1]) * s / parts);
+        const len = L / parts; prev.e.push({to: cur, len, w: len * cost, name: r.n}); cur.e.push({to: prev, len, w: len * cost, name: r.n}); prev = cur;
+      }
+    }
+  }
+})();
+function nearestNode(x, z, namedOnly){
+  let best = null, bd = Infinity;
+  for (const n of G.values()){ const d = (n.x-x)**2 + (n.z-z)**2; if (d < bd && (!namedOnly || n.e.some(e => e.name))){ bd = d; best = n; } }
+  return best;
+}
+function shortest(a, b){
+  const dist = new Map([[a, 0]]), prev = new Map(), done = new Set(), heap = [[0, a]];
+  const push = it => { heap.push(it); let i = heap.length - 1; while (i > 0){ const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length){ heap[0] = last; let i = 0; for (;;){ let l = 2*i+1, r = l+1, m = i;
+    if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  while (heap.length){
+    const [d, n] = pop(); if (done.has(n)) continue; done.add(n); if (n === b) break;
+    for (const e of n.e){ const nd = d + e.w; if (nd < (dist.get(e.to) ?? Infinity)){ dist.set(e.to, nd); prev.set(e.to, {n, e}); push([nd, e.to]); } }
+  }
+  if (!prev.has(b) && a !== b) return null;
+  const legs = []; let c = b; while (c !== a){ const p = prev.get(c); legs.unshift({from: p.n, to: c, e: p.e}); c = p.n; }
+  return legs;
+}
+let routeMesh = null, routeDest = null, routeFromMe = false;
+function clearRoute(){ if (routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh = null; } routeDest = null; }
+const miles = m => m < 160 ? Math.round(m * 3.28084 / 10) * 10 + ' ft' : (m / 1609.34).toFixed(m < 1609 ? 2 : 1) + ' mi';
+function routeTo(p, quiet){
+  const gate = D.pois.find(q => q.id === 'mail-office') || D.pois[0];
+  const fromMe = !!me, start = fromMe ? me : [gate.x, gate.z];
+  const a = nearestNode(start[0], start[1]), b = nearestNode(p.x, p.z), legs = a && b ? shortest(a, b) : null;
+  if (!legs){ say('Couldn’t find a road route to that spot.'); return; }
+  // the line on the ground
+  const pts = [[start[0], start[1]], [a.x, a.z], ...legs.map(l => [l.to.x, l.to.z]), [p.x, p.z]], pos = [], idx = [], W = 7;
+  for (let i = 0; i < pts.length; i++){
+    const q = pts[i], pa = pts[Math.max(0, i-1)], pb = pts[Math.min(pts.length-1, i+1)];
+    let dx = pb[0]-pa[0], dz = pb[1]-pa[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const y = Y(q[0], q[1]) + 3.2;
+    pos.push(q[0] - dz*W, y, q[1] + dx*W, q[0] + dz*W, y, q[1] - dx*W);
+    if (i){ const o = (i-1)*2; idx.push(o, o+1, o+2, o+1, o+3, o+2); }
+  }
+  if (routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  routeMesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color: 0xb5452f, side: THREE.DoubleSide, transparent: true, opacity: .92, depthTest: false}));
+  routeMesh.renderOrder = 5; scene.add(routeMesh);
+  routeDest = p; routeFromMe = fromMe;
+  if (quiet) return;
+  // street-by-street steps
+  const steps = []; let total = 0;
+  for (let i = 0; i < legs.length; i++){
+    const L = legs[i], name = L.e.name || 'an unnamed lane'; total += L.e.len;
+    const last = steps[steps.length-1];
+    if (last && last.name === name){ last.len += L.e.len; continue; }
+    let turn = 'Start on';
+    if (last){ const A = legs[i-1], ax = A.to.x - A.from.x, az = A.to.z - A.from.z, bx2 = L.to.x - L.from.x, bz2 = L.to.z - L.from.z;
+      const ang = Math.atan2(ax*bz2 - az*bx2, ax*bx2 + az*bz2) * 180 / Math.PI;
+      turn = Math.abs(ang) < 28 ? 'Continue onto' : ang > 0 ? (ang > 120 ? 'Sharp right onto' : 'Right onto') : (ang < -120 ? 'Sharp left onto' : 'Left onto'); }
+    steps.push({turn, name, len: L.e.len});
+  }
+  const walk = Math.max(1, Math.round(total / 80));
+  for (const el of pinEls.values()) el.classList.remove('sel'); pinEls.get(p.id)?.classList.add('sel');
+  panel.style.setProperty('--c', 'var(--accent)');
+  panel.innerHTML = `<button class="x" aria-label="Close">×</button><div class="kick"><i></i>Route · ${fromMe ? 'from where you are' : 'from the Main Entrance'}</div>
+    <h2>${esc(p.name)}</h2><div class="big">${miles(total)} <small>· about ${walk} min on foot</small></div>
+    <ol class="steps">${steps.map((s, i) => `<li><b>${i + 1}</b><div>${esc(s.turn)} ${esc(s.name)}</div><span>${miles(s.len)}</span></li>`).join('')}
+    <li><b>●</b><div>${esc(p.name)}</div><span></span></li></ol>
+    ${fromMe ? '' : '<p class="fine">Tap the round target button to route from where you are instead.</p>'}
+    <div class="acts"><button class="btn" id="rBack">Back to place</button><button class="btn" id="rClear">Clear route</button></div>`;
+  panel.querySelector('.x').onclick = closePanel;
+  panel.querySelector('#rBack').onclick = () => { clearRoute(); openPlace(p); };
+  panel.querySelector('#rClear').onclick = closePanel;
+  panel.classList.add('open', 'route'); panel.scrollTop = 0;
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const q of pts){ x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); }
+  const span = Math.hypot(x1 - x0, z1 - z0);
+  flyTo((x0 + x1) / 2 + (small ? 0 : span * .18), (z0 + z1) / 2 + (small ? span * .3 : 0), Math.max(1200, span * (small ? 4.8 : 2.4)));
+  if (!fromMe && watchId === null) startLocate(true);
+}
+
+{ const at = new URLSearchParams(location.search).get('at');            // ?at=lat,lon pretends to be there (for testing)
+  if (at){ const [la, lo] = at.split(',').map(Number); watchId = -1; locBtn.classList.add('on'); gotFix(la, lo); } }
+
 /* ---------------- compass ---------------- */
 const needle = document.getElementById('needle');
 document.getElementById('compass').onclick = () => flyTo(controls.target.x, controls.target.z, undefined, 0);
@@ -691,7 +839,7 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 { const ld = document.getElementById('load'); ld.classList.add('done'); setTimeout(() => ld.remove(), 900); }
-window.__wle = {camera, controls, flyTo, place, HOME, THREE};
+window.__wle = {camera, controls, flyTo, place, HOME, THREE, routeTo, gotFix, D};
 </script>
 </body>
 </html>
