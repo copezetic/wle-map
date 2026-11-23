@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 122" role="img" aria-label="Sailboat, sun, pines and a school of fish">
+  <!-- A neighbor's redraw of the Wallenpaupack Lake Estates emblem: sails, sun, two pines, fish under the waterline. -->
+  <defs><g id="f"><path d="M0 0 Q9 -6.5 18 0 Q9 6.5 0 0 Z"/><path d="M18 0 l5 -3.6 M18 0 l5 3.6" fill="none"/></g></defs>
+  <circle cx="66" cy="30" r="21" fill="#c2622d"/>
+  <g fill="#3f5a4a">
+    <path d="M84 46 L98 80 H70 Z"/>
+    <path d="M100 30 L118 80 H82 Z"/>
+    <rect x="81.5" y="80" width="5" height="8"/>
+    <rect x="97.5" y="80" width="5" height="8"/>
+  </g>
+  <g fill="#f7f2e6" stroke="#22303a" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M46 5 Q74 40 84 77 L46 80 Z"/>
+    <path d="M41 22 Q30 54 12 80 H41 Z"/>
+  </g>
+  <path d="M43.5 3 V83" stroke="#22303a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M8 82.5 H88 L82 88 H15 Z" fill="#22303a"/>
+  <path d="M3 89 H121" stroke="#22303a" stroke-width="2.4" stroke-linecap="round"/>
+  <g fill="#34508a" stroke="#22303a" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#f" transform="translate(8 97)"/>
+    <use href="#f" transform="translate(36 97)"/>
+    <use href="#f" transform="translate(64 97)"/>
+    <use href="#f" transform="translate(92 97)"/>
+    <use href="#f" transform="translate(22 106.5)"/>
+    <use href="#f" transform="translate(50 106.5)"/>
+    <use href="#f" transform="translate(78 106.5)"/>
+    <use href="#f" transform="translate(50 116)"/>
+  </g>
+</svg>

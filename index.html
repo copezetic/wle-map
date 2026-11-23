@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wallenpaupack Lake Estates — A Neighbor's Map</title>
 <meta name="description" content="A 3D map of Wallenpaupack Lake Estates: pools, lakes, beaches, the marina, and every street. Made by a neighbor.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <meta property="og:title" content="Wallenpaupack Lake Estates — A Neighbor's Map">
 <meta property="og:description" content="A 3D map of the community: pools, lakes, beaches, the marina, and every street. Made by a neighbor.">
 <meta property="og:type" content="website">
@@ -31,6 +32,7 @@ canvas#gl:active{cursor:grabbing}
 /* ---------- masthead ---------- */
 header{position:fixed;left:0;right:0;top:0;z-index:5;padding:14px 20px 0;pointer-events:none}
 .mast{display:flex;align-items:flex-end;gap:16px;border-bottom:1px solid var(--rule);padding-bottom:10px}
+.mono img{display:block;height:50px;width:auto}
 .mono{font-family:var(--sc);font-weight:700;font-size:30px;line-height:.9;letter-spacing:.02em;color:var(--ink);
   padding-right:14px;border-right:1px solid var(--rule)}
 .title h1{margin:0;font-family:var(--sc);font-weight:600;font-size:21px;letter-spacing:.14em;line-height:1.1}
@@ -149,6 +151,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   header{padding:10px 12px 0}
   .mast{flex-wrap:wrap;gap:10px;padding-bottom:8px}
   .mono{font-size:24px;padding-right:10px}
+  .mono img{height:40px}
   .title h1{font-size:15px;letter-spacing:.1em}
   .title p{font-size:10px;letter-spacing:.16em}
   .tools{margin-left:0;width:100%}
@@ -176,7 +179,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 
 <header>
   <div class="mast">
-    <div class="mono" aria-hidden="true">WLE</div>
+    <div class="mono"><img src="logo.svg" alt="Wallenpaupack Lake Estates sailboat emblem" width="50" height="49"></div>
     <div class="title">
       <h1>Wallenpaupack Lake Estates</h1>
       <p>A Neighbor's Map · Lake Ariel, Pennsylvania</p>
