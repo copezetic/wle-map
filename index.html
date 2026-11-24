@@ -224,7 +224,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 </button>
 <div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
   Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
-<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · tap the map to close a card</div>
+<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats and golf carts</div>
 <div id="toast"></div>
 <div id="load"><span>Drawing the map…</span></div>
 
@@ -833,6 +833,112 @@ function routeTo(p, quiet){
 { const at = new URLSearchParams(location.search).get('at');            // ?at=lat,lon pretends to be there (for testing)
   if (at){ const [la, lo] = at.split(',').map(Number); watchId = -1; locBtn.classList.add('on'); gotFix(la, lo); } }
 
+/* ---------------- life on the map: docks, boats, floats and golf carts (shown when you zoom in) ---------------- */
+const life = (() => {
+  const g = new THREE.Group(); g.visible = false; scene.add(g);
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mat = c => new THREE.MeshBasicMaterial({color: c});
+  const box = (w, hh, d, c, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), mat(c)); m.position.set(x, y, z); return m; };
+  const rnd = (a, b) => a + Math.random() * (b - a), pickOne = a => a[Math.floor(Math.random() * a.length)];
+  const inRing = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++){ const a = r[i], b = r[j];
+    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const wet = (w, x, z) => inRing(w.o, x, z) && !(w.h || []).some(r => inRing(r, x, z));
+  const anyWet = (x, z) => D.water.some(w => wet(w, x, z));
+  const movers = [], bobbers = [];
+
+  /* --- the marina: finger piers traced from aerial imagery, with boats in the slips --- */
+  const WOOD = '#b6a383', HULLS = ['#f4f1ea', '#f4f1ea', '#e9e4d8', '#33506f', '#8a3b30', '#2f3d46'];
+  function pier(a, b, slips){
+    { let k = 1; while (k > .2 && !inside(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)) k -= .04; b = [a[0] + (b[0] - a[0]) * (k - .04), a[1] + (b[1] - a[1]) * (k - .04)]; }   // stop at the edge of the model
+    const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), rot = -Math.atan2(dz, dx);
+    const y = Y(b[0], b[1]) + 1.1, grp = new THREE.Group(); grp.position.set((a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2); grp.rotation.y = rot;
+    grp.add(box(L, .7, 2.6, WOOD));
+    if (slips) for (let s = -L / 2 + 9; s < L / 2 - 2; s += 8.5) for (const side of [-1, 1]){
+      grp.add(box(1.1, .6, 7, WOOD, s, 0, side * 4.6));
+      if (Math.random() < .62){ const len = rnd(5.2, 7), hull = box(2.6, 1.3, len, pickOne(HULLS), s + 3.6, .1, side * (2.2 + len / 2));
+        if (Math.random() < .5) hull.add(box(2.2, .7, len * .35, '#cfd6d8', 0, .9, -side * len * .12)); grp.add(hull); }
+    }
+    g.add(grp);
+  }
+  for (const lon of [-75.26668, -75.26620, -75.26580, -75.26543, -75.26511, -75.26474, -75.26414, -75.26377, -75.26339])
+    pier(toXZ(41.38829, lon), toXZ(41.38762, lon - .00011), true);
+
+  /* --- the U-Dock and swim floats off Main Beach (position is approximate) --- */
+  { const [ux, uz] = toXZ(41.39472, -75.25936), y = Y(ux, uz) + 1.1, u = new THREE.Group(); u.position.set(ux, y, uz); u.rotation.y = -Math.PI / 4;
+    u.add(box(30, .7, 2.6, WOOD, 0, 0, -9), box(30, .7, 2.6, WOOD, 0, 0, 9), box(2.6, .7, 20.6, WOOD, 15, 0, 0)); g.add(u);
+    const off = (along, across) => [ux + (along - across) * Math.SQRT1_2, uz + (along + across) * Math.SQRT1_2];
+    for (const [al, ac] of [[36, -16], [40, 14]]){ const [x, z] = off(al, ac), raft = box(5, .9, 5, '#d8cfb8', x, y, z); raft.add(box(4.2, .2, 4.2, '#8fb0b4', 0, .55, 0)); g.add(raft); bobbers.push([raft, y, rnd(0, 6)]); }
+    const tubes = ['#d9482b', '#e8b230', '#3f7f8c', '#d86a8a', '#6f8a4a', '#f4f1ea'];
+    for (let i = 0; i < 9; i++){ const [x, z] = off(rnd(-6, 30), rnd(-30, 30)); if (!anyWet(x, z)) continue;
+      const t = new THREE.Mesh(new THREE.TorusGeometry(1.25, .5, 6, 14), mat(tubes[i % tubes.length])); t.rotation.x = Math.PI / 2; t.position.set(x, y - .6, z); g.add(t); bobbers.push([t, y - .6, rnd(0, 6)]); }
+    for (let i = 0; i < 7; i++){ const [x, z] = off(48, -30 + i * 10), b = new THREE.Mesh(new THREE.SphereGeometry(.7, 8, 6), mat('#e0672f')); b.position.set(x, y - .7, z); g.add(b); bobbers.push([b, y - .7, i]); } }
+
+  /* --- boats under way --- */
+  function sailboat(){ const b = new THREE.Group(); b.add(box(7, 1.2, 2.3, '#f4f1ea', 0, .5, 0), box(.18, 9, .18, '#22303a', .6, 5, 0));
+    const tri = (pts, c) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); const m = mat(c); m.side = THREE.DoubleSide; return new THREE.Mesh(ge, m); };
+    b.add(tri([.4, 1.6, .15, .4, 9.2, .15, -3.4, 1.6, .9], '#fbf7ee'), tri([.9, 1.4, -.1, .9, 7.6, -.1, 3.3, 1.4, -.6], '#efe6d2')); return b; }
+  function motorboat(c){ const b = new THREE.Group(); b.add(box(6.4, 1.3, 2.5, c, 0, .5, 0), box(1.6, .9, 2.1, '#cfd6d8', .7, 1.5, 0), box(1.1, 1.1, .9, '#22303a', -3.2, .7, 0)); return b; }
+  function pontoon(){ const b = new THREE.Group(); b.add(box(7.5, .7, .8, '#c9cdd0', 0, .3, -1.2), box(7.5, .7, .8, '#c9cdd0', 0, .3, 1.2), box(7, .25, 3.2, '#e9e4d8', 0, .8, 0), box(4.5, .15, 3.3, '#33506f', -.6, 3, 0)); return b; }
+  function kayak(c){ const b = new THREE.Group(); b.add(box(4.2, .5, .85, c, 0, .25, 0), box(.5, .9, .5, '#22303a', -.2, .8, 0)); return b; }
+  function launch(mesh, w, speed, near){
+    const xs = w.o.map(q => q[0]), zs = w.o.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+    const ok = (x, z) => wet(w, x, z) && inside(x, z) && (!near || Math.hypot(x - near[0], z - near[1]) < near[2]) &&
+      [[14, 0], [-14, 0], [0, 14], [0, -14]].every(o => wet(w, x + o[0], z + o[1]));      // keep off the shore
+    const spot = () => { for (let i = 0; i < 400; i++){ const x = rnd(x0, x1), z = rnd(z0, z1); if (ok(x, z)) return [x, z]; } return null; };
+    const clear = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 12); for (let i = 1; i < n; i++) if (!ok(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)) return false; return true; };
+    const at = spot(); if (!at) return;
+    const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: Y(at[0], at[1]) + .5, ph: rnd(0, 6), k: 2.2,
+      next(){ for (let i = 0; i < 40; i++){ const t = spot(); if (t && clear(this.at, t)){ this.to = t; return; } } this.to = this.at; }};
+    mesh.position.set(at[0], m.y, at[1]); g.add(mesh); movers.push(m); m.next();
+  }
+  const lakeParts = n => D.water.filter(w => w.n === n);
+  const big = lakeParts('Lake Wallenpaupack').sort((a, b) => b.o.length - a.o.length)[0];
+  if (big){ const mb = toXZ(41.3935, -75.2585), mr = toXZ(41.3872, -75.2650);
+    launch(sailboat(), big, 2.6, [...mb, 520]); launch(sailboat(), big, 2.9, [...mr, 520]); launch(sailboat(), big, 2.3, [...mb, 700]);
+    launch(motorboat('#f4f1ea'), big, 8.5, [...mb, 800]); launch(motorboat('#8a3b30'), big, 9.5, [...mr, 700]); launch(motorboat('#33506f'), big, 7.5, [...mr, 600]);
+    launch(pontoon(), big, 4, [...mr, 420]); launch(pontoon(), big, 3.6, [...mb, 420]); }
+  for (const n of ['Deer Lake', 'Beaver Lake']) for (const w of lakeParts(n).slice(0, 1))
+    for (const c of ['#c8452c', '#e0a52c', '#3f7f8c']) launch(kayak(c), w, 1.25);
+
+  /* --- golf carts wandering the Estates' roads --- */
+  const home = [...G.values()].filter(n => n.e.length && inside(n.x, n.z));
+  function cart(c){ const b = new THREE.Group();
+    b.add(box(2.6, .55, 1.3, '#f1ece0', 0, .6, 0), box(.9, .5, 1.2, '#2f3d46', -.35, 1.05, 0), box(2.3, .1, 1.4, c, -.1, 2.05, 0),
+      box(.08, 1.2, .08, '#22303a', .95, 1.45, .6), box(.08, 1.2, .08, '#22303a', .95, 1.45, -.6), box(.08, 1.2, .08, '#22303a', -1.15, 1.45, .6), box(.08, 1.2, .08, '#22303a', -1.15, 1.45, -.6),
+      box(.6, .6, 1.5, '#22303a', .85, .3, 0), box(.6, .6, 1.5, '#22303a', -.85, .3, 0)); return b; }
+  const ROOFS = ['#7a3b2e', '#3f5a4a', '#33506f', '#c2622d', '#f7f2e6', '#22303a'];
+  if (home.length) for (let i = 0; i < 16; i++){
+    const mesh = cart(ROOFS[i % ROOFS.length]), a = pickOne(home);
+    const m = {mesh, a, b: a, prev: null, t: 0, len: 1, speed: rnd(4.5, 7), hd: 0, cart: true, k: 2.2,
+      next(){ const outs = this.b.e.filter(e => e.to !== this.a && inside(e.to.x, e.to.z)); const e = outs.length ? pickOne(outs) : this.b.e.find(e => e.to === this.a) || pickOne(this.b.e);
+        this.a = this.b; this.b = e.to; this.len = Math.max(1, e.len); this.t = 0; }};
+    m.next(); g.add(mesh); movers.push(m);
+  }
+
+  let last = 0;
+  function update(now, dist){
+    const show = dist < 2300; if (g.visible !== show) g.visible = show; if (!show){ last = now; return; }
+    const dt = Math.min(.1, (now - last) / 1000 || 0); last = now; const t = now / 1000, big = Math.min(3.2, Math.max(1, dist / 350));
+    for (const [m, y, ph] of bobbers) m.position.y = y + (still ? 0 : Math.sin(t * 1.3 + ph) * .22);
+    for (const m of movers){
+      const s = m.k * big; m.mesh.scale.setScalar(s);
+      if (m.cart){
+        if (!still){ m.t += m.speed * dt / m.len; if (m.t >= 1) m.next(); }
+        const x = m.a.x + (m.b.x - m.a.x) * m.t, z = m.a.z + (m.b.z - m.a.z) * m.t, want = -Math.atan2(m.b.z - m.a.z, m.b.x - m.a.x);
+        let d = want - m.hd; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; m.hd += d * Math.min(1, dt * 6 + (still ? 1 : 0));
+        const ox = Math.sin(m.hd) * 1.6, oz = Math.cos(m.hd) * 1.6;                          // keep right
+        m.mesh.position.set(x + ox, Y(x, z) + .4, z + oz); m.mesh.rotation.y = m.hd;
+      } else {
+        const dx = m.to[0] - m.at[0], dz = m.to[1] - m.at[1], L = Math.hypot(dx, dz);
+        if (L < 3) m.next(); else if (!still){ const st = Math.min(L, m.speed * dt); m.at = [m.at[0] + dx / L * st, m.at[1] + dz / L * st]; }
+        const want = -Math.atan2(dz, dx); let d = want - m.hd; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; m.hd += d * Math.min(1, dt * 1.5);
+        m.mesh.position.set(m.at[0], m.y + (still ? 0 : Math.sin(t * 1.1 + m.ph) * .12), m.at[1]); m.mesh.rotation.y = m.hd;
+      }
+    }
+  }
+  return {update, g, movers};
+})();
+
 /* ---------------- compass ---------------- */
 const needle = document.getElementById('needle');
 document.getElementById('compass').onclick = () => flyTo(controls.target.x, controls.target.z, undefined, 0);
@@ -867,13 +973,14 @@ function frame(now){
   offTmp.copy(camera.position).sub(controls.target); sphTmp.setFromVector3(offTmp);
   if (isFinite(sphTmp.theta)) needle.setAttribute('transform', `rotate(${(sphTmp.theta * 180 / Math.PI).toFixed(1)} 30 30)`);
   document.body.classList.toggle('far', sphTmp.radius > 3600);
+  life.update(now, sphTmp.radius);
   renderer.render(scene, camera);
   layout();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 { const ld = document.getElementById('load'); ld.classList.add('done'); setTimeout(() => ld.remove(), 900); }
-window.__wle = {camera, controls, flyTo, place, HOME, THREE, routeTo, gotFix, D};
+window.__wle = {life, camera, controls, flyTo, place, HOME, THREE, routeTo, gotFix, D};
 </script>
 </body>
 </html>
