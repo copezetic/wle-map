@@ -224,7 +224,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 </button>
 <div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
   Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
-<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats, golf carts and courts</div>
+<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats, golf carts, deer and the odd bear</div>
 <div id="toast"></div>
 <div id="load"><span>Drawing the map…</span></div>
 
@@ -946,6 +946,32 @@ const life = (() => {
     m.next(); g.add(mesh); movers.push(m);
   }
 
+  /* --- wildlife: white-tailed deer in twos and threes, and a couple of black bears, wandering the woods and lawns --- */
+  function deer(buck){ const b = new THREE.Group(), C = pickOne(['#a9794f', '#b3835a', '#9c6f48']), LEG = '#7d5a3c';
+    b.add(box(1.9, .8, .62, C, 0, 1.35, 0), box(1.5, .2, .5, '#e9dcc4', -.05, .92, 0), tilt(box(.42, 1, .42, C, .95, 1.95, 0), -.5), box(.7, .4, .4, C, 1.45, 2.4, 0), box(.2, .18, .22, DARK, 1.82, 2.34, 0),
+      tilt(box(.1, .34, .16, C, 1.15, 2.72, .2), 0, .4), tilt(box(.1, .34, .16, C, 1.15, 2.72, -.2), 0, -.4), box(.16, .4, .3, '#f7f2e6', -1, 1.55, 0));
+    for (const [x, z] of [[.7, .2], [.7, -.2], [-.75, .2], [-.75, -.2]]) b.add(box(.15, 1, .15, LEG, x, .5, z));
+    if (buck) for (const sd of [1, -1]) b.add(tilt(box(.08, .7, .08, '#e7dcc3', 1.2, 3, sd * .3), 0, sd * .5), box(.3, .07, .07, '#e7dcc3', 1.36, 3.12, sd * .44));
+    return b; }
+  function bear(){ const b = new THREE.Group(), C = '#2a2522';
+    b.add(box(2.4, 1.25, 1.15, C, 0, 1.3, 0), box(1, .9, 1.05, C, -.9, 1.55, 0), box(.85, .8, .85, C, 1.5, 1.5, 0), box(.5, .36, .44, '#8a6a52', 2.05, 1.36, 0), box(.14, .14, .2, DARK, 2.32, 1.44, 0),
+      box(.16, .24, .22, C, 1.3, 2, .32), box(.16, .24, .22, C, 1.3, 2, -.32));
+    for (const [x, z] of [[.85, .38], [.85, -.38], [-.85, .38], [-.85, -.38]]) b.add(box(.42, .8, .4, C, x, .4, z));
+    return b; }
+  { const roofs = D.buildings.map(b => { const xs = b.p.map(q => q[0]), zs = b.p.map(q => q[1]); return [Math.min(...xs) - 4, Math.max(...xs) + 4, Math.min(...zs) - 4, Math.max(...zs) + 4]; });
+    const dry = (x, z) => inside(x, z) && !anyWet(x, z) && !roofs.some(r => x > r[0] && x < r[1] && z > r[2] && z < r[3]);
+    const walkable = (a, c) => { const n = Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 8); for (let i = 1; i <= n; i++) if (!dry(a[0] + (c[0] - a[0]) * i / n, a[1] + (c[1] - a[1]) * i / n)) return false; return true; };
+    const bxs = B.map(q => q[0]), bzs = B.map(q => q[1]), X0 = Math.min(...bxs), X1 = Math.max(...bxs), Z0 = Math.min(...bzs), Z1 = Math.max(...bzs);
+    const anywhere = () => { for (let i = 0; i < 300; i++){ const x = rnd(X0, X1), z = rnd(Z0, Z1); if (dry(x, z)) return [x, z]; } return null; };
+    const roam = (mesh, at, speed, range, k) => { const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: 0, ph: 0, k, land: true, wait: rnd(0, 6),
+        next(){ this.wait = Math.random() < .7 ? rnd(3, 12) : 0;                                 // stop and browse most of the time
+          for (let i = 0; i < 30; i++){ const a = rnd(0, 6.28), d = rnd(range * .25, range), t = [this.at[0] + Math.cos(a) * d, this.at[1] + Math.sin(a) * d]; if (dry(t[0], t[1]) && walkable(this.at, t)){ this.to = t; return; } }
+          this.to = this.at; }};
+      mesh.position.set(at[0], Y(at[0], at[1]), at[1]); g.add(mesh); movers.push(m); m.next(); };
+    for (let h = 0; h < 7; h++){ const c = anywhere(); if (!c) continue;                           // seven small herds
+      for (let i = 0, n = 2 + (h % 2); i < n; i++){ const p = [c[0] + rnd(-9, 9), c[1] + rnd(-9, 9)]; if (dry(p[0], p[1])) roam(deer(i === 0 && h % 3 === 0), p, rnd(1.6, 2.4), 70, 1.5); } }
+    for (let i = 0; i < 2; i++){ const c = anywhere(); if (c) roam(bear(), c, 1.5, 110, 1.6); } }
+
   /* --- amenity detail traced from aerial imagery: pools, courts, sand, docks, boat racks --- */
   const det = new THREE.Group(); scene.add(det);
   const clearRings = [];                                   // nothing grows here
@@ -1049,9 +1075,10 @@ const life = (() => {
         m.mesh.position.set(x + ox, Y(x, z) + .4, z + oz); m.mesh.rotation.y = m.hd;
       } else {
         const dx = m.to[0] - m.at[0], dz = m.to[1] - m.at[1], L = Math.hypot(dx, dz);
-        if (L < 3) m.next(); else if (!still){ const st = Math.min(L, m.speed * dt); m.at = [m.at[0] + dx / L * st, m.at[1] + dz / L * st]; }
-        const want = -Math.atan2(dz, dx); let d = want - m.hd; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; m.hd += d * Math.min(1, dt * 1.5);
-        m.mesh.position.set(m.at[0], m.y + (still ? 0 : Math.sin(t * 1.1 + m.ph) * .12), m.at[1]); m.mesh.rotation.y = m.hd;
+        if (m.wait > 0){ if (!still) m.wait -= dt; }
+        else if (L < 3) m.next(); else if (!still){ const st = Math.min(L, m.speed * dt); m.at = [m.at[0] + dx / L * st, m.at[1] + dz / L * st]; }
+        if (L >= 3 && !(m.wait > 0)){ const want = -Math.atan2(dz, dx); let d = want - m.hd; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; m.hd += d * Math.min(1, dt * (m.land ? 3 : 1.5)); }
+        m.mesh.position.set(m.at[0], m.land ? Y(m.at[0], m.at[1]) + .1 : m.y + (still ? 0 : Math.sin(t * 1.1 + m.ph) * .12), m.at[1]); m.mesh.rotation.y = m.hd;
       }
     }
   }
