@@ -114,8 +114,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 #panel a.btn{flex:1;text-align:center;font:600 12px var(--sc);letter-spacing:.14em;text-decoration:none;
   padding:9px 8px 8px;border:1px solid var(--ink);color:var(--ink)}
 #panel a.btn.pri{background:var(--ink);color:var(--card)}
-#panel .x{position:absolute;right:8px;top:6px;width:34px;height:34px;border:0;background:none;font:400 26px var(--serif);
-  color:var(--ink-soft);cursor:pointer}
+#panel .x{position:absolute;right:8px;top:8px;z-index:2;width:38px;height:38px;border-radius:50%;border:1px solid var(--ink);
+  background:var(--card);font:400 26px/1 var(--serif);color:var(--ink);cursor:pointer;box-shadow:2px 2px 0 rgba(34,48,58,.16)}
 
 /* ---------- footer bits ---------- */
 #hint{position:fixed;right:20px;bottom:14px;z-index:4;font:italic 500 15px var(--serif);color:var(--ink-soft);pointer-events:none}
@@ -140,6 +140,11 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 #panel .acts{flex-wrap:wrap}
 #compass{position:fixed;left:20px;bottom:58px;z-index:4;width:54px;height:54px;border:0;background:none;padding:0;cursor:pointer}
 #compass svg{width:100%;height:100%;display:block}
+#zoom{position:fixed;left:20px;bottom:190px;z-index:4;display:flex;flex-direction:column;width:54px;border:1px solid var(--ink);background:var(--card);box-shadow:3px 3px 0 rgba(34,48,58,.16)}
+#zoom button{height:46px;border:0;border-bottom:1px solid var(--rule);background:none;color:var(--ink);font:500 28px/1 var(--serif);cursor:pointer;padding:0}
+#zoom button:last-child{border-bottom:0;height:auto;padding:8px 2px 7px;font:700 10px/1.15 var(--sc);letter-spacing:.1em}
+#zoom button:hover{background:var(--paper-2)}
+#zoom,#locate,#compass{transition:bottom .35s cubic-bezier(.2,.8,.2,1)}
 #load{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--paper);transition:opacity .6s}
 #load span{font:italic 600 22px var(--serif);color:var(--ink-soft)}
 #load.done{opacity:0;pointer-events:none}
@@ -164,8 +169,16 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
     transform:translateY(105%);padding-bottom:calc(16px + env(safe-area-inset-bottom))}
   #hint{display:none}
   #credit{left:12px;right:12px;bottom:8px;max-width:none;font-size:11px}
-  #compass{left:12px;bottom:44px;width:46px;height:46px}
-  #locate{left:12px;bottom:98px;width:46px;height:46px}
+  #compass{left:12px;bottom:calc(44px + var(--lift,0px));width:46px;height:46px}
+  #locate{left:12px;bottom:calc(98px + var(--lift,0px));width:46px;height:46px}
+  #zoom{left:12px;bottom:calc(154px + var(--lift,0px));width:46px}
+  #zoom button{height:42px}
+  body.sheet #compass{left:auto;right:12px;bottom:calc(8px + var(--lift,0px))}
+  body.sheet #locate{left:auto;right:66px;bottom:calc(8px + var(--lift,0px))}
+  body.sheet #zoom{bottom:calc(8px + var(--lift,0px));flex-direction:row;width:auto}
+  body.sheet #zoom button{width:46px;height:44px;border-bottom:0;border-right:1px solid var(--rule)}
+  body.sheet #zoom button:last-child{width:64px;height:44px;border-right:0;padding:0 4px}
+  #panel{max-height:50%}
   #panel.route{max-height:42%}
   .pin .tag{font-size:14px}
 }
@@ -199,6 +212,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 
 <aside id="panel" aria-live="polite"></aside>
 
+<div id="zoom"><button id="zIn" title="Zoom in" aria-label="Zoom in">+</button><button id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button id="zAll" title="Show the whole community">Whole map</button></div>
 <button id="locate" title="Show where I am" aria-label="Show where I am">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>
 </button>
@@ -210,7 +224,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 </button>
 <div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
   Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
-<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin</div>
+<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · tap the map to close a card</div>
 <div id="toast"></div>
 <div id="load"><span>Drawing the map…</span></div>
 
@@ -589,7 +603,9 @@ function openPlace(p){
     <div class="acts">${p.outside ? '' : '<button class="btn pri" id="goRoute">Route on this map</button>'}${p.url ? `<a class="btn" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.urlLabel || 'WLE page')}</a>` : ''}
     <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${ll[0].toFixed(6)},${ll[1].toFixed(6)}" target="_blank" rel="noopener">Google Maps</a></div>`;
   panel.classList.remove('route'); const gr = panel.querySelector('#goRoute'); if (gr) gr.onclick = () => routeTo(p);
-  panel.querySelector('.x').onclick = closePanel;
+  panel.querySelector('.x').onclick = dismiss;
+  if (!back) back = view();
+  placeOpen = true;
   panel.classList.add('open'); panel.scrollTop = 0;
   flyTo(p.x + (small ? 0 : 120), p.z + (small ? 140 : 0), 1500);
 }
@@ -628,8 +644,23 @@ document.getElementById('bInfo').onclick = () => {
      <div class="sec">Online</div><div class="links">${L.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
      <p class="fine">Office hours: Monday–Saturday, 8:30 AM – 4:30 PM.</p>`);
 };
-function closePanel(){ clearRoute(); panel.classList.remove('open', 'route'); for (const el of pinEls.values()) el.classList.remove('sel'); }
-addEventListener('keydown', e => { if (e.key === 'Escape'){ closePanel(); hideResults(); } });
+let back = null, placeOpen = false;      // the view you had before opening a place card
+function view(){ const s = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)); return {x: controls.target.x, z: controls.target.z, d: s.radius, az: s.theta}; }
+function closePanel(){ clearRoute(); panel.classList.remove('open', 'route'); for (const el of pinEls.values()) el.classList.remove('sel'); back = null; placeOpen = false; }
+function dismiss(){ const b = back, now = view(); closePanel(); if (b && b.d > now.d * 1.15) flyTo(b.x, b.z, b.d, b.az); }   // step back out to where you were
+addEventListener('keydown', e => { if (e.key === 'Escape'){ dismiss(); hideResults(); } });
+function zoomBy(f){ const v = view(); flyTo(v.x, v.z, Math.min(controls.maxDistance, Math.max(controls.minDistance, v.d * f))); fly.ms = 380; }
+document.getElementById('zIn').onclick = () => zoomBy(.6);
+document.getElementById('zOut').onclick = () => zoomBy(1.7);
+document.getElementById('zAll').onclick = () => { closePanel(); flyTo(HOME.t.x, HOME.t.z, HOME.d, HOME.az); };
+{ let dn = null;                           // a plain tap on the map (not a drag) closes an open place card
+  canvas.addEventListener('pointerdown', e => { dn = [e.clientX, e.clientY, performance.now()]; });
+  canvas.addEventListener('pointerup', e => { if (!dn || EDIT) return; const moved = Math.hypot(e.clientX - dn[0], e.clientY - dn[1]), held = performance.now() - dn[2]; dn = null;
+    if (moved < 7 && held < 500 && placeOpen && panel.classList.contains('open') && !panel.classList.contains('route')) dismiss(); }); }
+{ const mq = matchMedia('(max-width:760px)');   // on a phone the card is a bottom sheet: lift the map buttons above it
+  const sync = () => { const up = mq.matches && panel.classList.contains('open'); document.body.classList.toggle('sheet', up); document.body.style.setProperty('--lift', (up ? panel.offsetHeight : 0) + 'px'); };
+  new MutationObserver(sync).observe(panel, {attributes: true, attributeFilter: ['class'], childList: true});
+  new ResizeObserver(sync).observe(panel); mq.addEventListener('change', sync); }
 
 /* ---------------- filter chips ---------------- */
 const chips = document.getElementById('chips'), hidden = new Set();
