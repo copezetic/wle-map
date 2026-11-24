@@ -848,6 +848,10 @@ const life = (() => {
 
   /* --- the marina: finger piers traced from aerial imagery, with boats in the slips --- */
   const WOOD = '#b6a383', HULLS = ['#f4f1ea', '#f4f1ea', '#e9e4d8', '#33506f', '#8a3b30', '#2f3d46'];
+  const ball = (r, c, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), mat(c)); m.position.set(x, y, z); return m; };
+  const tilt = (m, rz = 0, rx = 0) => { m.rotation.z = rz; m.rotation.x = rx; return m; };
+  const DECKC = '#f3ecdc', DARK = '#22303a', GLASS = '#a9cbd4', SKIN = '#e3c19a';
+  const person = (c, x, y, z) => [box(.42, .75, .5, c, x, y + .38, z), ball(.22, SKIN, x, y + .98, z)];
   function pier(a, b, slips){
     { let k = 1; while (k > .2 && !inside(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)) k -= .04; b = [a[0] + (b[0] - a[0]) * (k - .04), a[1] + (b[1] - a[1]) * (k - .04)]; }   // stop at the edge of the model
     const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), rot = -Math.atan2(dz, dx);
@@ -855,8 +859,7 @@ const life = (() => {
     grp.add(box(L, .7, 2.6, WOOD));
     if (slips) for (let s = -L / 2 + 9; s < L / 2 - 2; s += 8.5) for (const side of [-1, 1]){
       grp.add(box(1.1, .6, 7, WOOD, s, 0, side * 4.6));
-      if (Math.random() < .62){ const len = rnd(5.2, 7), hull = box(2.6, 1.3, len, pickOne(HULLS), s + 3.6, .1, side * (2.2 + len / 2));
-        if (Math.random() < .5) hull.add(box(2.2, .7, len * .35, '#cfd6d8', 0, .9, -side * len * .12)); grp.add(hull); }
+      if (Math.random() < .62){ const len = rnd(5.2, 7), bt = moored(len, pickOne(HULLS)); bt.position.set(s + 3.6, -.55, side * (2.2 + len / 2)); bt.rotation.y = side * Math.PI / 2; grp.add(bt); }
     }
     g.add(grp);
   }
@@ -876,13 +879,34 @@ const life = (() => {
   /* --- boats under way --- */
   function wake(from, len, half){ const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute([-from, .12, 0, -from - len, .12, half, -from - len, .12, -half], 3));
     return new THREE.Mesh(ge, new THREE.MeshBasicMaterial({color: '#f3f7f6', transparent: true, opacity: .6, side: THREE.DoubleSide, depthWrite: false})); }
-  function sailboat(){ const b = new THREE.Group(); b.add(box(7, 1.2, 2.3, '#f4f1ea', 0, .5, 0), box(.18, 9, .18, '#22303a', .6, 5, 0));
+  /* a boat hull: pointed bow toward +x, squared transom (or pointed both ends for a kayak); sides and deck take different colours so it reads without lighting */
+  function hull(L, B, H, side, deck, both = false){ const s = new THREE.Shape(), h = L / 2, w = B / 2;
+    if (both){ s.moveTo(-h, 0); s.quadraticCurveTo(0, 2 * w, h, 0); s.quadraticCurveTo(0, -2 * w, -h, 0); }
+    else { s.moveTo(-h, -w * .84); s.lineTo(-h, w * .84); s.quadraticCurveTo(-h * .2, w * 1.08, h * .25, w * .9); s.quadraticCurveTo(h * .8, w * .55, h, 0);
+      s.quadraticCurveTo(h * .8, -w * .55, h * .25, -w * .9); s.quadraticCurveTo(-h * .2, -w * 1.08, -h, -w * .84); }
+    return new THREE.Mesh(new THREE.ExtrudeGeometry(s, {depth: H, bevelEnabled: false, curveSegments: 6}).rotateX(-Math.PI / 2), [mat(deck), mat(side)]); }
+  function runabout(c, L = 6.2){ const b = new THREE.Group(), k = L / 6.2;                                    // open bow-rider with a windshield and an outboard
+    b.add(hull(L, 2.4, 1.1, c, DECKC), box(3 * k, .06, 1.7, '#b9ab8c', -.9 * k, 1.13, 0), box(L * .82, .16, .06, DECKC, -.25 * k, .86, 1.2), box(L * .82, .16, .06, DECKC, -.25 * k, .86, -1.2),
+      tilt(box(.1, .7, 1.9, GLASS, .7 * k, 1.42, 0), .4), box(.5, .5, 1.7, '#e9e4d8', -2.2 * k, 1.36, 0), box(.5, .5, .55, DARK, -.3 * k, 1.36, .5), box(.5, .5, .55, DARK, -.3 * k, 1.36, -.5),
+      box(.75, 1.05, .55, DARK, -L / 2 - .2, .95, 0), box(.5, .3, .6, '#cfd6d8', -L / 2 - .2, 1.6, 0));
+    return b; }
+  function moored(len, c){ const b = runabout(c, len); if (Math.random() < .45) b.add(box(len * .5, .22, 2, pickOne(['#33506f', '#2f3d46', '#8a3b30', '#3f5a4a']), -len * .18, 1.4, 0)); return b; }   // some under a cover
+  function sailboat(){ const b = new THREE.Group(); b.add(hull(7.4, 2.2, 1, '#f4f1ea', '#e7dcc3'), box(6.2, .14, .06, '#33506f', -.3, .7, 1.1), box(6.2, .14, .06, '#33506f', -.3, .7, -1.1),
+      box(2.3, .55, 1.25, '#fbf7ee', .1, 1.27, 0), box(1.5, .06, 1.1, '#b9ab8c', -2.2, 1.03, 0), box(.16, 9.2, .16, DARK, .6, 5.6, 0), box(3.7, .12, .12, DARK, -1.25, 2.05, 0), ...person('#c8452c', -2.3, 1.05, .3));
     const tri = (pts, c) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); const m = mat(c); m.side = THREE.DoubleSide; return new THREE.Mesh(ge, m); };
-    b.add(tri([.4, 1.6, .15, .4, 9.2, .15, -3.4, 1.6, .9], '#fbf7ee'), tri([.9, 1.4, -.1, .9, 7.6, -.1, 3.3, 1.4, -.6], '#efe6d2')); return b; }
-  function motorboat(c){ const b = new THREE.Group(); b.add(box(6.4, 1.3, 2.5, c, 0, .5, 0), box(1.6, .9, 2.1, '#cfd6d8', .7, 1.5, 0), box(1.1, 1.1, .9, '#22303a', -3.2, .7, 0), wake(3.2, 11, 2.8)); return b; }
-  function jetski(c){ const b = new THREE.Group(); b.add(box(3.2, .8, 1.1, c, 0, .4, 0), box(1.2, .6, .7, '#22303a', -.3, 1, 0), wake(1.6, 7, 1.6)); return b; }
-  function pontoon(){ const b = new THREE.Group(); b.add(box(7.5, .7, .8, '#c9cdd0', 0, .3, -1.2), box(7.5, .7, .8, '#c9cdd0', 0, .3, 1.2), box(7, .25, 3.2, '#e9e4d8', 0, .8, 0), box(4.5, .15, 3.3, '#33506f', -.6, 3, 0)); return b; }
-  function kayak(c){ const b = new THREE.Group(); b.add(box(4.2, .5, .85, c, 0, .25, 0), box(.5, .9, .5, '#22303a', -.2, .8, 0)); return b; }
+    b.add(tri([.5, 2.15, .12, .5, 9.9, .12, -3.1, 2.15, .7], '#fbf7ee'), tri([.85, 1.5, -.1, .85, 8.4, -.1, 3.6, 1.2, -.45], '#efe6d2'), tri([.5, 7.4, .13, .5, 9.9, .13, -.65, 7.4, .32], '#c2622d')); return b; }
+  function motorboat(c){ const b = runabout(c); b.add(...person('#f4f1ea', -.3, 1.6, .5), wake(3.4, 11, 2.8)); if (Math.random() < .6) b.add(...person(pickOne(['#e0a52c', '#3f7f8c', '#d86a8a']), -2.2, 1.6, -.4)); return b; }
+  function jetski(c){ const b = new THREE.Group(); b.add(hull(3.2, 1.15, .55, c, DARK), box(1.5, .32, .5, DARK, -.55, .7, 0), box(.8, .5, .75, c, .55, .8, 0), box(.1, .1, 1, DARK, .35, 1.15, 0),
+      ...person('#e0672f', -.35, .85, 0), wake(1.6, 7, 1.6)); return b; }
+  function pontoon(){ const b = new THREE.Group(), TUBE = '#c9cdd0', RAIL = '#f4f1ea';
+    for (const z of [-1.15, 1.15]){ const t = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, 6.8, 8), mat(TUBE)); t.rotation.z = Math.PI / 2; t.position.set(-.2, .3, z);
+      const n = new THREE.Mesh(new THREE.ConeGeometry(.42, 1.1, 8), mat(TUBE)); n.rotation.z = -Math.PI / 2; n.position.set(3.75, .3, z); b.add(t, n); }
+    b.add(box(7, .2, 3.1, '#e9e4d8', -.1, .82, 0), box(6.9, .55, .08, RAIL, -.1, 1.2, 1.52), box(6.9, .55, .08, RAIL, -.1, 1.2, -1.52), box(.08, .55, 1.1, RAIL, 3.35, 1.2, 1), box(.08, .55, 1.1, RAIL, 3.35, 1.2, -1), box(.08, .55, 3.1, RAIL, -3.55, 1.2, 0),
+      box(1.7, .45, .6, '#d8cfb8', 2.2, 1.15, 1.1), box(1.7, .45, .6, '#d8cfb8', 2.2, 1.15, -1.1), box(.6, .45, 2.2, '#d8cfb8', -3.1, 1.15, 0), box(.6, .8, .6, DARK, -.2, 1.3, .8),
+      box(3.8, .12, 3.2, '#33506f', -1.2, 3.05, 0), box(.7, .95, .5, DARK, -3.95, .7, 0), ...person('#3f7f8c', -.9, .95, .8), ...person('#e0a52c', 2.2, 1.2, 1.1), ...person('#f4f1ea', 2.2, 1.2, -1.1), wake(3.9, 6, 1.8));
+    for (const [x, z] of [[.6, 1.5], [.6, -1.5], [-3, 1.5], [-3, -1.5]]) b.add(box(.08, 2, .08, DARK, x, 2.05, z)); return b; }
+  function kayak(c){ const b = new THREE.Group(); b.add(hull(4.3, .8, .42, c, c, true), box(.95, .05, .46, DARK, -.1, .44, 0), ...person('#f4f1ea', -.15, .42, 0), tilt(box(.08, .08, 2.5, DARK, .3, 1, 0), 0, .38),
+      tilt(box(.08, .34, .42, '#e0a52c', .3, 1.45, 1.2), 0, .38), tilt(box(.08, .34, .42, '#e0a52c', .3, .55, -1.2), 0, .38)); return b; }
   function launch(mesh, w, speed, near){
     const xs = w.o.map(q => q[0]), zs = w.o.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
     const ok = (x, z) => wet(w, x, z) && inside(x, z) && (!near || Math.hypot(x - near[0], z - near[1]) < near[2]) &&
@@ -890,7 +914,7 @@ const life = (() => {
     const spot = () => { for (let i = 0; i < 400; i++){ const x = rnd(x0, x1), z = rnd(z0, z1); if (ok(x, z)) return [x, z]; } return null; };
     const clear = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 12); for (let i = 1; i < n; i++) if (!ok(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)) return false; return true; };
     const at = spot(); if (!at) return;
-    const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: Y(at[0], at[1]) + .5, ph: rnd(0, 6), k: 1.5,
+    const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: Y(at[0], at[1]) + .15, ph: rnd(0, 6), k: 1.05,
       next(){ for (let i = 0; i < 40; i++){ const t = spot(); if (t && clear(this.at, t)){ this.to = t; return; } } this.to = this.at; }};
     mesh.position.set(at[0], m.y, at[1]); g.add(mesh); movers.push(m); m.next();
   }
