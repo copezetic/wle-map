@@ -224,7 +224,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 </button>
 <div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
   Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
-<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats and golf carts</div>
+<div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats, golf carts and courts</div>
 <div id="toast"></div>
 <div id="load"><span>Drawing the map…</span></div>
 
@@ -874,10 +874,13 @@ const life = (() => {
     for (let i = 0; i < 7; i++){ const [x, z] = off(48, -30 + i * 10), b = new THREE.Mesh(new THREE.SphereGeometry(.7, 8, 6), mat('#e0672f')); b.position.set(x, y - .7, z); g.add(b); bobbers.push([b, y - .7, i]); } }
 
   /* --- boats under way --- */
+  function wake(from, len, half){ const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute([-from, .12, 0, -from - len, .12, half, -from - len, .12, -half], 3));
+    return new THREE.Mesh(ge, new THREE.MeshBasicMaterial({color: '#f3f7f6', transparent: true, opacity: .6, side: THREE.DoubleSide, depthWrite: false})); }
   function sailboat(){ const b = new THREE.Group(); b.add(box(7, 1.2, 2.3, '#f4f1ea', 0, .5, 0), box(.18, 9, .18, '#22303a', .6, 5, 0));
     const tri = (pts, c) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); const m = mat(c); m.side = THREE.DoubleSide; return new THREE.Mesh(ge, m); };
     b.add(tri([.4, 1.6, .15, .4, 9.2, .15, -3.4, 1.6, .9], '#fbf7ee'), tri([.9, 1.4, -.1, .9, 7.6, -.1, 3.3, 1.4, -.6], '#efe6d2')); return b; }
-  function motorboat(c){ const b = new THREE.Group(); b.add(box(6.4, 1.3, 2.5, c, 0, .5, 0), box(1.6, .9, 2.1, '#cfd6d8', .7, 1.5, 0), box(1.1, 1.1, .9, '#22303a', -3.2, .7, 0)); return b; }
+  function motorboat(c){ const b = new THREE.Group(); b.add(box(6.4, 1.3, 2.5, c, 0, .5, 0), box(1.6, .9, 2.1, '#cfd6d8', .7, 1.5, 0), box(1.1, 1.1, .9, '#22303a', -3.2, .7, 0), wake(3.2, 11, 2.8)); return b; }
+  function jetski(c){ const b = new THREE.Group(); b.add(box(3.2, .8, 1.1, c, 0, .4, 0), box(1.2, .6, .7, '#22303a', -.3, 1, 0), wake(1.6, 7, 1.6)); return b; }
   function pontoon(){ const b = new THREE.Group(); b.add(box(7.5, .7, .8, '#c9cdd0', 0, .3, -1.2), box(7.5, .7, .8, '#c9cdd0', 0, .3, 1.2), box(7, .25, 3.2, '#e9e4d8', 0, .8, 0), box(4.5, .15, 3.3, '#33506f', -.6, 3, 0)); return b; }
   function kayak(c){ const b = new THREE.Group(); b.add(box(4.2, .5, .85, c, 0, .25, 0), box(.5, .9, .5, '#22303a', -.2, .8, 0)); return b; }
   function launch(mesh, w, speed, near){
@@ -887,7 +890,7 @@ const life = (() => {
     const spot = () => { for (let i = 0; i < 400; i++){ const x = rnd(x0, x1), z = rnd(z0, z1); if (ok(x, z)) return [x, z]; } return null; };
     const clear = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 12); for (let i = 1; i < n; i++) if (!ok(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)) return false; return true; };
     const at = spot(); if (!at) return;
-    const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: Y(at[0], at[1]) + .5, ph: rnd(0, 6), k: 2.2,
+    const m = {mesh, at, to: at, speed, hd: rnd(0, 6.28), y: Y(at[0], at[1]) + .5, ph: rnd(0, 6), k: 1.5,
       next(){ for (let i = 0; i < 40; i++){ const t = spot(); if (t && clear(this.at, t)){ this.to = t; return; } } this.to = this.at; }};
     mesh.position.set(at[0], m.y, at[1]); g.add(mesh); movers.push(m); m.next();
   }
@@ -896,6 +899,8 @@ const life = (() => {
   if (big){ const mb = toXZ(41.3935, -75.2585), mr = toXZ(41.3872, -75.2650);
     launch(sailboat(), big, 2.6, [...mb, 520]); launch(sailboat(), big, 2.9, [...mr, 520]); launch(sailboat(), big, 2.3, [...mb, 700]);
     launch(motorboat('#f4f1ea'), big, 8.5, [...mb, 800]); launch(motorboat('#8a3b30'), big, 9.5, [...mr, 700]); launch(motorboat('#33506f'), big, 7.5, [...mr, 600]);
+    for (const [c, sp] of [['#f4f1ea', 10], ['#2f3d46', 8], ['#c2622d', 11], ['#e9e4d8', 9]]) launch(motorboat(c), big, sp, [...(sp > 9 ? mb : mr), 900]);
+    launch(jetski('#e0a52c'), big, 13, [...mb, 700]); launch(jetski('#3f7f8c'), big, 12, [...mr, 700]);
     launch(pontoon(), big, 4, [...mr, 420]); launch(pontoon(), big, 3.6, [...mb, 420]); }
   for (const n of ['Deer Lake', 'Beaver Lake']) for (const w of lakeParts(n).slice(0, 1))
     for (const c of ['#c8452c', '#e0a52c', '#3f7f8c']) launch(kayak(c), w, 1.25);
@@ -909,16 +914,92 @@ const life = (() => {
   const ROOFS = ['#7a3b2e', '#3f5a4a', '#33506f', '#c2622d', '#f7f2e6', '#22303a'];
   if (home.length) for (let i = 0; i < 16; i++){
     const mesh = cart(ROOFS[i % ROOFS.length]), a = pickOne(home);
-    const m = {mesh, a, b: a, prev: null, t: 0, len: 1, speed: rnd(4.5, 7), hd: 0, cart: true, k: 2.2,
+    const m = {mesh, a, b: a, prev: null, t: 0, len: 1, speed: rnd(4.5, 7), hd: 0, cart: true, k: 1.5,
       next(){ const outs = this.b.e.filter(e => e.to !== this.a && inside(e.to.x, e.to.z)); const e = outs.length ? pickOne(outs) : this.b.e.find(e => e.to === this.a) || pickOne(this.b.e);
         this.a = this.b; this.b = e.to; this.len = Math.max(1, e.len); this.t = 0; }};
     m.next(); g.add(mesh); movers.push(m);
   }
 
+  /* --- amenity detail traced from aerial imagery: pools, courts, sand, docks, boat racks --- */
+  const det = new THREE.Group(); scene.add(det);
+  const clearRings = [];                                   // nothing grows here
+  function patchXZ(ring, color, lift = .6, flat = false, keep = true){
+    const tris = THREE.ShapeUtils.triangulateShape(ring.map(q => new THREE.Vector2(q[0], q[1])), []);
+    const top = Math.max(...ring.map(q => Y(q[0], q[1]))), pos = [];
+    for (const q of ring) pos.push(q[0], (flat ? top : Y(q[0], q[1])) + lift, q[1]);
+    const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.setIndex(tris.flat());
+    const m = mat(color); m.side = THREE.DoubleSide; det.add(new THREE.Mesh(ge, m)); if (keep) clearRings.push(ring); return ring;
+  }
+  const patch = (ll, color, lift, flat) => patchXZ(ll.map(q => toXZ(q[0], q[1])), color, lift, flat);
+  const grow = (ring, f) => { const cx = ring.reduce((s, q) => s + q[0], 0) / ring.length, cz = ring.reduce((s, q) => s + q[1], 0) / ring.length; return ring.map(q => [cx + (q[0] - cx) * f, cz + (q[1] - cz) * f]); };
+  function court(lat, lon, w, l, deg, color, line = '#f4f1ea', net = true){              // one playing court, long axis turned deg from north
+    const [cx, cz] = toXZ(lat, lon), a = deg * Math.PI / 180, ux = Math.sin(a), uz = -Math.cos(a), vx = -uz, vz = ux;
+    const r = (hw, hl) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(s => [cx + vx * hw * s[0] + ux * hl * s[1], cz + vz * hw * s[0] + uz * hl * s[1]]);
+    patchXZ(r(w / 2 + .35, l / 2 + .35), line, .75, true); patchXZ(r(w / 2, l / 2), color, .9, true, false);
+    if (net) patchXZ(r(w / 2 + .6, .18), '#22303a', 1.5, true, false);
+  }
+  const SAND = '#ead9b0', DECK = '#ddd5c2', POOL = '#4fb4cf';
+  const club = D.pois.find(q => q.id === 'clubhouse');
+  for (const f of D.features) if (f.k === 'pool'){
+    const cx = f.p.reduce((s, q) => s + q[0], 0) / f.p.length, cz = f.p.reduce((s, q) => s + q[1], 0) / f.p.length;
+    if (club && Math.hypot(cx - club.x, cz - club.z) < 60) continue;                        // that one is indoors
+    patchXZ(grow(f.p, 1.45), DECK, .7, true); patchXZ(f.p, POOL, 1, true, false);
+  } else if (f.k !== 'stream' && f.k !== 'wetland') clearRings.push(f.p);
+  patch([[41.39549, -75.28390], [41.39549, -75.28381], [41.39542, -75.28381], [41.39542, -75.28390]], POOL, 1.2, true);                      // Beaver kiddie pool
+  for (const lon of [-75.28441, -75.28430, -75.28419]) court(41.395785, lon, 6.1, 13.4, 0, '#3f78a8');                                        // Beaver pickleball
+  patch([[41.39586, -75.28449], [41.39586, -75.28411], [41.39571, -75.28411], [41.39571, -75.28449]], '#5f8a5a', .55, true);
+  patch([[41.39862, -75.27342], [41.39862, -75.27313], [41.39848, -75.27313], [41.39848, -75.27342]], SAND, .6);                              // Rockledge sand volleyball
+  court(41.39855, -75.273275, 9, 18, 90, SAND, SAND);
+  court(41.397875, -75.27348, 4.6, 19, 153, '#b5523f', '#f4f1ea', false);                                                                     // shuffleboard by the Adult Lodge
+  patch([[41.39831, -75.26388], [41.39831, -75.26345], [41.39815, -75.26325], [41.39798, -75.26325], [41.39798, -75.26388]], '#5f8a5a', .55, true);   // Tennis Lane courts
+  court(41.39813, -75.26374, 11, 23.8, 0, '#3f78a8'); court(41.39813, -75.26352, 11, 23.8, 0, '#3f78a8');
+  court(41.39806, -75.26334, 8, 13, 0, '#8a6a52', '#f4f1ea', false);
+  patch([[41.39845, -75.26383], [41.39845, -75.26362], [41.39831, -75.26355], [41.39831, -75.26385]], '#b5523f', .6, true);
+  const sands = [
+    patch([[41.39668, -75.27018], [41.39655, -75.27013], [41.39640, -75.27005], [41.39622, -75.26995], [41.39612, -75.26998], [41.39618, -75.27010], [41.39630, -75.27025], [41.39648, -75.27038], [41.39655, -75.27040], [41.39662, -75.27025]], SAND),   // Deer Beach
+    patch([[41.39180, -75.28422], [41.39178, -75.28397], [41.39160, -75.28396], [41.39140, -75.28405], [41.39132, -75.28415], [41.39140, -75.28433], [41.39160, -75.28433]], SAND),                                                                       // Beaver Beach
+    patch([[41.39492, -75.25950], [41.39486, -75.25958], [41.39476, -75.25966], [41.39470, -75.25972], [41.39474, -75.25978], [41.39482, -75.25972], [41.39490, -75.25962]], SAND)];                                                                      // Main Beach
+  const SHADES = ['#c8452c', '#e0a52c', '#3f7f8c', '#f4f1ea', '#33506f', '#d86a8a'];
+  for (const ring of sands){ const xs = ring.map(q => q[0]), zs = ring.map(q => q[1]); let n = 0;
+    for (let i = 0; i < 60 && n < 6; i++){ const x = rnd(Math.min(...xs), Math.max(...xs)), z = rnd(Math.min(...zs), Math.max(...zs)); if (!inRing(ring, x, z) || anyWet(x, z)) continue; n++;
+      const y = Y(x, z), u = new THREE.Mesh(new THREE.ConeGeometry(1.7, .9, 8), mat(SHADES[(n + i) % SHADES.length])); u.position.set(x, y + 2.6, z); g.add(u, box(.12, 2.4, .12, '#22303a', x, y + 1.3, z), box(1.9, .1, .9, SHADES[(n + i + 3) % SHADES.length], x + 1.6, y + .75, z + .8)); } }
+  pier(toXZ(41.39179, -75.28397), toXZ(41.39177, -75.28379), false);                                                                         // Beaver Beach dock
+  const BOATS = ['#c8452c', '#e0a52c', '#3f7f8c', '#6f8a4a', '#33506f', '#f4f1ea', '#8a3b30'];
+  for (const id of ['boats-beaver', 'genese', 'boats-deer', 'beaverdock']){ const q = D.pois.find(q => q.id === id); if (!q || anyWet(q.x, q.z)) continue;
+    for (let i = 0; i < 7; i++){ const x = q.x + 6 + i * 1.5, z = q.z + 5; g.add(box(.8, .45, 4.2, BOATS[i % BOATS.length], x, Y(x, z) + .7, z)); } }
+
+  /* --- trees: the Estates are mostly woods, so every open spot that is not a road, a roof, a lawn or water gets one --- */
+  const woods = new THREE.Group(); scene.add(woods);
+  { const CELL = 5, gw = Math.ceil(XS / CELL), gh = Math.ceil(ZS / CELL), occ = new Uint8Array(gw * gh);
+    const stamp = (x, z, r) => { const i0 = Math.floor((x - r - M.xmin) / CELL), i1 = Math.floor((x + r - M.xmin) / CELL), j0 = Math.floor((z - r - M.zmin) / CELL), j1 = Math.floor((z + r - M.zmin) / CELL);
+      for (let j = Math.max(0, j0); j <= Math.min(gh - 1, j1); j++) for (let i = Math.max(0, i0); i <= Math.min(gw - 1, i1); i++) occ[j * gw + i] = 1; };
+    for (const r of D.roads){ const rad = r.k === 'trail' ? 3 : r.k === 'main' ? 11 : 8;
+      for (let i = 1; i < r.p.length; i++){ const a = r.p[i-1], b = r.p[i], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 4)); for (let s = 0; s <= n; s++) stamp(a[0] + (b[0] - a[0]) * s / n, a[1] + (b[1] - a[1]) * s / n, rad); } }
+    for (const b of D.buildings){ const xs = b.p.map(q => q[0]), zs = b.p.map(q => q[1]), x0 = Math.min(...xs) - 5, x1 = Math.max(...xs) + 5, z0 = Math.min(...zs) - 5, z1 = Math.max(...zs) + 5;
+      for (let z = z0; z <= z1; z += CELL) for (let x = x0; x <= x1; x += CELL) stamp(x, z, 1); }
+    for (const q of D.pois) stamp(q.x, q.z, 14);
+    const open = (x, z) => { const i = Math.floor((x - M.xmin) / CELL), j = Math.floor((z - M.zmin) / CELL); return i >= 0 && j >= 0 && i < gw && j < gh && !occ[j * gw + i]; };
+    const lit = geo => { const n = geo.attributes.normal, c = []; for (let i = 0; i < n.count; i++){ const s = .66 + .34 * Math.max(0, n.getX(i) * -.5 + n.getY(i) * .6 + n.getZ(i) * -.62); c.push(s, s, s); } geo.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return geo; };
+    const pineG = lit(new THREE.ConeGeometry(1, 2.6, 6).translate(0, 1.6, 0)), leafG = lit(new THREE.IcosahedronGeometry(1, 0).scale(1, 1.05, 1).translate(0, 1.5, 0));
+    const spots = [[], []], STEP = small ? 22 : 17;
+    for (let z = M.zmin; z < M.zmax; z += STEP) for (let x = M.xmin; x < M.xmax; x += STEP){
+      const tx = x + rnd(0, STEP), tz = z + rnd(0, STEP);
+      if (!open(tx, tz) || !inside(tx, tz) || anyWet(tx, tz) || clearRings.some(r => inRing(r, tx, tz))) continue;
+      spots[Math.random() < .55 ? 0 : 1].push([tx, tz]);
+    }
+    const PINE = ['#3f5a4a', '#46634d', '#375244', '#4c6a50'], LEAF = ['#6f8a4a', '#5c7a4f', '#7d9456', '#688548', '#8a9a50'];
+    const dummy = new THREE.Object3D(), col = new THREE.Color();
+    [[pineG, PINE, 3.4, 5.6], [leafG, LEAF, 3.8, 5.8]].forEach(([geo, pal, s0, s1], k) => {
+      const im = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({vertexColors: true}), spots[k].length);
+      spots[k].forEach(([x, z], i) => { const s = rnd(s0, s1); dummy.position.set(x, Y(x, z) - .5, z); dummy.scale.set(s, s * rnd(.9, 1.25), s); dummy.rotation.y = rnd(0, 6.28); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, col.set(pickOne(pal))); });
+      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; woods.add(im); });
+    woods.userData.count = spots[0].length + spots[1].length; }
+
   let last = 0;
   function update(now, dist){
+    det.visible = dist < 4500;
     const show = dist < 2300; if (g.visible !== show) g.visible = show; if (!show){ last = now; return; }
-    const dt = Math.min(.1, (now - last) / 1000 || 0); last = now; const t = now / 1000, big = Math.min(3.2, Math.max(1, dist / 350));
+    const dt = Math.min(.1, (now - last) / 1000 || 0); last = now; const t = now / 1000, big = Math.min(2.6, Math.max(1, dist / 380));
     for (const [m, y, ph] of bobbers) m.position.y = y + (still ? 0 : Math.sin(t * 1.3 + ph) * .22);
     for (const m of movers){
       const s = m.k * big; m.mesh.scale.setScalar(s);
@@ -936,7 +1017,7 @@ const life = (() => {
       }
     }
   }
-  return {update, g, movers};
+  return {update, g, movers, woods, det};
 })();
 
 /* ---------------- compass ---------------- */
