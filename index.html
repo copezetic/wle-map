@@ -516,12 +516,12 @@ scene.add(terrain, side);
 /* ---------------- camera + controls ---------------- */
 const controls = new MapControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = .09;
-controls.minDistance = 160; controls.maxDistance = 9500; controls.maxPolarAngle = Math.PI * .47;
+controls.minDistance = 160; controls.maxDistance = 15500; controls.maxPolarAngle = Math.PI * .47;
 controls.zoomSpeed = 1.1; controls.rotateSpeed = .5;
 const bx = B.map(p => p[0]), bz = B.map(p => p[1]);
 const cx0 = (Math.min(...bx) + Math.max(...bx)) / 2, cz0 = (Math.min(...bz) + Math.max(...bz)) / 2 + 150;
 const aspect0 = innerWidth / innerHeight;
-const HOME = {t: new THREE.Vector3(cx0, 60, cz0), az: aspect0 < 1 ? -1.05 : -0.3, pol: 0.86, d: aspect0 < 1 ? 12200 : Math.max(6400, 9600 / aspect0)};
+const HOME = {t: new THREE.Vector3(cx0, 60, cz0), az: aspect0 < 1 ? -1.05 : -0.3, pol: 0.86, d: aspect0 < 1 ? 15500 : Math.max(6400, 9600 / aspect0)};
 function place(t, az, pol, d){
   controls.target.copy(t);
   camera.position.set(t.x + d*Math.sin(pol)*Math.sin(az), t.y + d*Math.cos(pol), t.z + d*Math.sin(pol)*Math.cos(az));
@@ -900,6 +900,8 @@ const life = (() => {
     launch(sailboat(), big, 2.6, [...mb, 520]); launch(sailboat(), big, 2.9, [...mr, 520]); launch(sailboat(), big, 2.3, [...mb, 700]);
     launch(motorboat('#f4f1ea'), big, 8.5, [...mb, 800]); launch(motorboat('#8a3b30'), big, 9.5, [...mr, 700]); launch(motorboat('#33506f'), big, 7.5, [...mr, 600]);
     for (const [c, sp] of [['#f4f1ea', 10], ['#2f3d46', 8], ['#c2622d', 11], ['#e9e4d8', 9]]) launch(motorboat(c), big, sp, [...(sp > 9 ? mb : mr), 900]);
+    for (const [c, sp] of [['#f4f1ea', 10.5], ['#33506f', 8.5], ['#8a3b30', 9.5]]) launch(motorboat(c), big, sp, [...mr, 1700]);            // out toward Kipp Island
+    launch(sailboat(), big, 2.7, [...mr, 1500]);
     launch(jetski('#e0a52c'), big, 13, [...mb, 700]); launch(jetski('#3f7f8c'), big, 12, [...mr, 700]);
     launch(pontoon(), big, 4, [...mr, 420]); launch(pontoon(), big, 3.6, [...mb, 420]); }
   for (const n of ['Deer Lake', 'Beaver Lake']) for (const w of lakeParts(n).slice(0, 1))
@@ -956,11 +958,13 @@ const life = (() => {
   { const [bx, bz] = toXZ(41.39786, -75.27348), by = Math.max(Y(bx, bz), Y(bx + 9, bz - 9), Y(bx - 9, bz + 9)) + 1.25;
     ['#c8452c', '#c8452c', '#3f7f8c', '#3f7f8c', '#f4f1ea'].forEach((c, i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(i === 4 ? .22 : .38, 8, 6), mat(c)); const t = rnd(-7, 7), o = (i % 2 ? 1.3 : -1.3) + rnd(-.7, .7); s.position.set(bx + .454 * t + .891 * o, by, bz + .891 * t - .454 * o); g.add(s); });
     g.add(box(4.6, .5, .5, '#6b4a34', bx + 6.2, Y(bx + 6.2, bz) + .9, bz)); }                                                                    // a bench beside the lanes
-  { const [sx, sz] = toXZ(41.39841, -75.27294), sy = Y(sx, sz);                                                                                // Rockledge Snack Shack
-    const hip = new THREE.Mesh(new THREE.ConeGeometry(5.2, 1.8, 4), mat('#c2622d')); hip.rotation.y = Math.PI / 4; hip.position.set(sx, sy + 4.1, sz);
-    det.add(box(5.4, 3.2, 4.4, '#f7f2e6', sx, sy + 1.6, sz), hip, box(5.8, .18, 1.6, '#c8452c', sx, sy + 2.5, sz + 2.9), box(4.2, .9, .2, '#22303a', sx, sy + 1.9, sz + 2.22));
-    for (const dx of [-3.2, 0, 3.2]){ const tx = sx + dx, tz = sz + 7; det.add(box(1.6, .12, 1.6, '#e0a52c', tx, Y(tx, tz) + 1.1, tz), box(.14, 1.1, .14, '#22303a', tx, Y(tx, tz) + .55, tz)); }
-    clearRings.push([[sx - 6, sz - 5], [sx + 6, sz - 5], [sx + 6, sz + 10], [sx - 6, sz + 10]]); }
+  { const [sx, sz] = toXZ(41.39782, -75.27267), sy = Y(sx, sz);                                                                                // Rockledge Snack Shack: the small building beside the Adult Lodge
+    const bl = D.buildings.reduce((m, b) => { const d = Math.hypot(b.p[0][0] - sx, b.p[0][1] - sz); return d < m[0] ? [d, b] : m; }, [1e9, null])[1];
+    const roofY = Math.max(...bl.p.map(q => Y(q[0], q[1]))) + Math.min(8, Math.max(4, bl.h)) * 1.25;                                             // same top the building block gets
+    const hip = new THREE.Mesh(new THREE.ConeGeometry(9.6, 3, 4), mat('#c2622d')); hip.rotation.y = Math.PI / 4; hip.position.set(sx, roofY + 1.55, sz);
+    det.add(hip, box(1.8, .2, 8, '#c8452c', sx - 7, sy + 3.4, sz), box(.25, 1.1, 6, '#22303a', sx - 6.15, sy + 2.4, sz));
+    for (const dz of [-4.5, 0, 4.5]){ const tx = sx - 11, tz = sz + dz; det.add(box(1.7, .12, 1.7, '#e0a52c', tx, Y(tx, tz) + 1.1, tz), box(.14, 1.1, .14, '#22303a', tx, Y(tx, tz) + .55, tz)); }
+    clearRings.push([[sx - 14, sz - 8], [sx + 8, sz - 8], [sx + 8, sz + 8], [sx - 14, sz + 8]]); }
   patch([[41.39831, -75.26388], [41.39831, -75.26345], [41.39815, -75.26325], [41.39798, -75.26325], [41.39798, -75.26388]], '#5f8a5a', .55, true);   // Tennis Lane courts
   court(41.39813, -75.26374, 11, 23.8, 0, '#3f78a8'); court(41.39813, -75.26352, 11, 23.8, 0, '#3f78a8');
   court(41.39806, -75.26334, 8, 13, 0, '#8a6a52', '#f4f1ea', false);
