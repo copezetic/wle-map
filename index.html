@@ -67,6 +67,18 @@ header{position:fixed;left:0;right:0;top:0;z-index:5;padding:14px 20px 0;pointer
 #panel .links a{font:600 12px var(--sc);letter-spacing:.1em;text-decoration:none;color:var(--ink);border:1px solid var(--rule);padding:8px 8px 7px;text-align:center}
 #panel .links a:hover{background:var(--paper-2)}
 #panel .fine{font:italic 500 14px var(--serif);color:var(--ink-soft);margin:12px 0 0}
+.viewbar{display:flex;gap:12px;align-items:center;margin-top:10px;pointer-events:auto;width:fit-content;max-width:100%}
+.view-switch{display:flex;flex-shrink:0;border:1px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--card)}
+.view-switch button{border:0;background:none;color:var(--ink);padding:7px 14px 6px;font:700 12px var(--sc);letter-spacing:.12em;cursor:pointer}
+.view-switch button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.view-switch button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+#aerial-note{font:500 13px/1.2 var(--serif);color:var(--ink-soft);background:rgba(247,242,230,.92);padding:4px 7px;border-radius:2px}
+#aerial-note[hidden]{display:none}
+#aerial-retry{font:inherit;color:var(--accent);border:0;padding:0 0 0 6px;background:none;text-decoration:underline;cursor:pointer}
+body.aerial header{background:linear-gradient(to bottom,rgba(241,234,219,.98) 0%,rgba(241,234,219,.94) 75%,rgba(241,234,219,0));padding-bottom:18px}
+body.aerial .lake{color:#f7f2e6;text-shadow:0 1px 3px #22303a,0 0 5px #22303a}
+body.aerial #credit,body.aerial #hint{background:rgba(247,242,230,.95);padding:5px 8px;border-radius:2px}
+#hint{max-width:40vw;text-align:right}
 .chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 0;pointer-events:auto;width:fit-content}
 .chip{font:600 12px var(--sc);letter-spacing:.14em;color:var(--ink);background:rgba(247,242,230,.86);
   border:1px solid var(--rule);border-radius:999px;padding:6px 12px 5px;cursor:pointer;display:flex;align-items:center;gap:7px}
@@ -98,7 +110,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 @keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2.6);opacity:0}}
 
 /* ---------- panel ---------- */
-#panel{position:fixed;z-index:6;right:20px;top:118px;width:340px;max-height:calc(100% - 190px);overflow:auto;
+#panel{position:fixed;z-index:6;right:20px;top:164px;width:340px;max-height:calc(100% - 205px);overflow:auto;
   background:var(--card);border:1px solid var(--ink);box-shadow:6px 6px 0 rgba(34,48,58,.16);
   padding:18px 20px 16px;transform:translateX(calc(100% + 40px));transition:transform .35s cubic-bezier(.2,.8,.2,1)}
 #panel.open{transform:none}
@@ -167,6 +179,13 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   .chip{white-space:nowrap;font-size:11px;padding:6px 10px 5px}
   #panel{left:0;right:0;top:auto;bottom:0;width:auto;max-height:56%;border-width:1px 0 0;box-shadow:0 -8px 30px rgba(40,30,10,.2);
     transform:translateY(105%);padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .viewbar{gap:8px;margin-top:8px}
+  .view-switch button{font-size:11px;padding:7px 10px 6px}
+  #aerial-note{font-size:12px}
+  body.aerial:not(.sheet) #compass{bottom:94px}
+  body.aerial:not(.sheet) #locate{bottom:148px}
+  body.aerial:not(.sheet) #zoom{bottom:204px}
+  body.aerial.sheet #credit{visibility:hidden}
   #hint{display:none}
   #credit{left:12px;right:12px;bottom:8px;max-width:none;font-size:11px}
   #compass{left:12px;bottom:calc(44px + var(--lift,0px));width:46px;height:46px}
@@ -208,6 +227,13 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
     </div>
   </div>
   <div class="chips" id="chips"></div>
+  <div class="viewbar">
+    <div class="view-switch" role="group" aria-label="Map view">
+      <button id="viewIllustrated" type="button" aria-pressed="true">Illustrated</button>
+      <button id="viewAerial" type="button" aria-pressed="false">Aerial</button>
+    </div>
+    <div id="aerial-note" hidden><span id="aerial-status" role="status" aria-live="polite"></span><button id="aerial-retry" type="button" hidden>Retry</button></div>
+  </div>
 </header>
 
 <aside id="panel" aria-live="polite"></aside>
@@ -223,7 +249,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   <text x="30" y="5" text-anchor="middle" font-family="Georgia,serif" font-size="8" font-weight="700" fill="#22303a" dy="-1"></text></g></svg>
 </button>
 <div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
-  Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.</div>
+  Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.
+  <span id="aerial-credit" hidden>Aerial imagery: PEMA / <a href="https://www.pasda.psu.edu/" target="_blank" rel="noopener">PASDA</a> · 2021 · 6-inch source imagery.</span></div>
 <div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats, golf carts, deer and the odd bear</div>
 <div id="toast"></div>
 <div id="load"><span>Drawing the map…</span></div>
@@ -235,6 +262,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 <script type="module">
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
+import { createAerialLayer } from './aerial.js';
 
 const EX = 2.3;            // vertical exaggeration
 const DEPTH = 120;         // thickness of the earth block under the lowest point
@@ -472,6 +500,8 @@ function buildTerrain(){
 const {top: terrain, side} = buildTerrain();
 scene.add(terrain, side);
 
+const illustratedBuildings = new THREE.Group(); scene.add(illustratedBuildings);
+
 /* houses: little extruded blocks */
 (function houses(){
   const pos = [], col = [], idx = [];
@@ -499,7 +529,7 @@ scene.add(terrain, side);
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(idx);
-  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide})));
+  illustratedBuildings.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide})));
 })();
 
 /* soft shadow on the "table" */
@@ -1085,6 +1115,32 @@ const life = (() => {
   return {update, g, movers, woods, det};
 })();
 
+/* ---------------- aerial view ---------------- */
+let aerialMode = false;
+const illustratedButton = document.getElementById('viewIllustrated'), aerialButton = document.getElementById('viewAerial');
+const aerialNote = document.getElementById('aerial-note'), aerialStatus = document.getElementById('aerial-status');
+const aerialRetry = document.getElementById('aerial-retry'), aerialCredit = document.getElementById('aerial-credit');
+const hint = document.getElementById('hint'), illustratedHint = hint.textContent;
+const aerial = createAerialLayer({scene, terrain, camera, renderer, meta: M, onStatus(status){
+  const messages = {loading: 'Loading aerial detail…', ready: '2021 aerial · zoom for detail',
+    partial: 'Some detail unavailable', error: 'Aerial unavailable — try again'};
+  aerialStatus.textContent = messages[status];
+  aerialRetry.hidden = status !== 'partial' && status !== 'error';
+}});
+function setMapView(value){
+  aerialMode = value;
+  document.body.classList.toggle('aerial', value);
+  illustratedButton.setAttribute('aria-pressed', String(!value)); aerialButton.setAttribute('aria-pressed', String(value));
+  aerialNote.hidden = !value; aerialCredit.hidden = !value;
+  illustratedBuildings.visible = !value; life.woods.visible = !value;
+  if (value){ life.g.visible = false; life.det.visible = false; }
+  hint.textContent = value ? 'Drag to move · right-drag to turn · scroll to zoom · tap a pin' : illustratedHint;
+  aerial.setActive(value);
+}
+illustratedButton.onclick = () => setMapView(false);
+aerialButton.onclick = () => setMapView(true);
+aerialRetry.onclick = () => aerial.setActive(true);
+
 /* ---------------- compass ---------------- */
 const needle = document.getElementById('needle');
 document.getElementById('compass').onclick = () => flyTo(controls.target.x, controls.target.z, undefined, 0);
@@ -1119,14 +1175,15 @@ function frame(now){
   offTmp.copy(camera.position).sub(controls.target); sphTmp.setFromVector3(offTmp);
   if (isFinite(sphTmp.theta)) needle.setAttribute('transform', `rotate(${(sphTmp.theta * 180 / Math.PI).toFixed(1)} 30 30)`);
   document.body.classList.toggle('far', sphTmp.radius > 3600);
-  life.update(now, sphTmp.radius);
+  if (!aerialMode) life.update(now, sphTmp.radius);
+  aerial.update(now);
   renderer.render(scene, camera);
   layout();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 { const ld = document.getElementById('load'); ld.classList.add('done'); setTimeout(() => ld.remove(), 900); }
-window.__wle = {life, camera, controls, flyTo, place, HOME, THREE, routeTo, gotFix, D};
+window.__wle = {aerial, setMapView, life, camera, controls, flyTo, place, HOME, THREE, routeTo, gotFix, D};
 </script>
 </body>
 </html>
