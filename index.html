@@ -943,14 +943,24 @@ const life = (() => {
   for (const f of D.features) if (f.k === 'pool'){
     const cx = f.p.reduce((s, q) => s + q[0], 0) / f.p.length, cz = f.p.reduce((s, q) => s + q[1], 0) / f.p.length;
     if (club && Math.hypot(cx - club.x, cz - club.z) < 60) continue;                        // that one is indoors
-    patchXZ(grow(f.p, 1.45), DECK, .7, true); patchXZ(f.p, POOL, 1, true, false);
+    const deck = grow(f.p, 1.45), top = r => Math.max(...r.map(q => Y(q[0], q[1])));
+    patchXZ(deck, DECK, .7, true); patchXZ(f.p, POOL, 1 + top(deck) - top(f.p), true, false);   // water sits on the deck, not under it
   } else if (f.k !== 'stream' && f.k !== 'wetland') clearRings.push(f.p);
   patch([[41.39549, -75.28390], [41.39549, -75.28381], [41.39542, -75.28381], [41.39542, -75.28390]], POOL, 1.2, true);                      // Beaver kiddie pool
   for (const lon of [-75.28441, -75.28430, -75.28419]) court(41.395785, lon, 6.1, 13.4, 0, '#3f78a8');                                        // Beaver pickleball
   patch([[41.39586, -75.28449], [41.39586, -75.28411], [41.39571, -75.28411], [41.39571, -75.28449]], '#5f8a5a', .55, true);
   patch([[41.39862, -75.27342], [41.39862, -75.27313], [41.39848, -75.27313], [41.39848, -75.27342]], SAND, .6);                              // Rockledge sand volleyball
   court(41.39855, -75.273275, 9, 18, 90, SAND, SAND);
-  court(41.397875, -75.27348, 4.6, 19, 153, '#b5523f', '#f4f1ea', false);                                                                     // shuffleboard by the Adult Lodge
+  court(41.39786, -75.27348, 6.4, 19.6, 153, '#8a6a52', '#8a6a52', false);                                                                    // bocce: two clay lanes in a timber frame, on the rise above Rockledge Pool
+  court(41.397865, -75.273466, 2.5, 18.6, 153, '#c9866a', '#f4f1ea', false); court(41.397855, -75.273494, 2.5, 18.6, 153, '#c9866a', '#f4f1ea', false);
+  { const [bx, bz] = toXZ(41.39786, -75.27348), by = Math.max(Y(bx, bz), Y(bx + 9, bz - 9), Y(bx - 9, bz + 9)) + 1.25;
+    ['#c8452c', '#c8452c', '#3f7f8c', '#3f7f8c', '#f4f1ea'].forEach((c, i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(i === 4 ? .22 : .38, 8, 6), mat(c)); const t = rnd(-7, 7), o = (i % 2 ? 1.3 : -1.3) + rnd(-.7, .7); s.position.set(bx + .454 * t + .891 * o, by, bz + .891 * t - .454 * o); g.add(s); });
+    g.add(box(4.6, .5, .5, '#6b4a34', bx + 6.2, Y(bx + 6.2, bz) + .9, bz)); }                                                                    // a bench beside the lanes
+  { const [sx, sz] = toXZ(41.39841, -75.27294), sy = Y(sx, sz);                                                                                // Rockledge Snack Shack
+    const hip = new THREE.Mesh(new THREE.ConeGeometry(5.2, 1.8, 4), mat('#c2622d')); hip.rotation.y = Math.PI / 4; hip.position.set(sx, sy + 4.1, sz);
+    det.add(box(5.4, 3.2, 4.4, '#f7f2e6', sx, sy + 1.6, sz), hip, box(5.8, .18, 1.6, '#c8452c', sx, sy + 2.5, sz + 2.9), box(4.2, .9, .2, '#22303a', sx, sy + 1.9, sz + 2.22));
+    for (const dx of [-3.2, 0, 3.2]){ const tx = sx + dx, tz = sz + 7; det.add(box(1.6, .12, 1.6, '#e0a52c', tx, Y(tx, tz) + 1.1, tz), box(.14, 1.1, .14, '#22303a', tx, Y(tx, tz) + .55, tz)); }
+    clearRings.push([[sx - 6, sz - 5], [sx + 6, sz - 5], [sx + 6, sz + 10], [sx - 6, sz + 10]]); }
   patch([[41.39831, -75.26388], [41.39831, -75.26345], [41.39815, -75.26325], [41.39798, -75.26325], [41.39798, -75.26388]], '#5f8a5a', .55, true);   // Tennis Lane courts
   court(41.39813, -75.26374, 11, 23.8, 0, '#3f78a8'); court(41.39813, -75.26352, 11, 23.8, 0, '#3f78a8');
   court(41.39806, -75.26334, 8, 13, 0, '#8a6a52', '#f4f1ea', false);
