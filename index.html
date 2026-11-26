@@ -131,7 +131,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
 
 /* ---------- footer bits ---------- */
 #hint{position:fixed;right:20px;bottom:14px;z-index:4;font:italic 500 15px var(--serif);color:var(--ink-soft);pointer-events:none}
-#credit{position:fixed;left:20px;bottom:12px;z-index:4;font:500 12.5px var(--serif);color:var(--ink-soft);max-width:56vw;line-height:1.3}
+#credit{position:fixed;left:86px;bottom:12px;z-index:4;font:500 12.5px var(--serif);color:var(--ink-soft);max-width:calc(56vw - 70px);line-height:1.3}
 #credit a{color:inherit}
 #locate{position:fixed;left:20px;bottom:122px;z-index:4;width:54px;height:54px;border-radius:50%;border:1px solid var(--ink);
   background:var(--card);cursor:pointer;display:grid;place-items:center;padding:0;color:var(--ink)}
@@ -188,6 +188,7 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   body.aerial.sheet #credit{visibility:hidden}
   #hint{display:none}
   #credit{left:12px;right:12px;bottom:8px;max-width:none;font-size:11px}
+  #credit .long{display:none}
   #compass{left:12px;bottom:calc(44px + var(--lift,0px));width:46px;height:46px}
   #locate{left:12px;bottom:calc(98px + var(--lift,0px));width:46px;height:46px}
   #zoom{left:12px;bottom:calc(154px + var(--lift,0px));width:46px}
@@ -248,7 +249,8 @@ body.far .pin.minor .tag,body.far .pin.minor .stem,.pin.tuck .tag,.pin.tuck .ste
   <g id="needle"><path d="M30 6 L35 30 L30 27 L25 30 Z" fill="#7a3b2e"/><path d="M30 54 L35 30 L30 33 L25 30 Z" fill="#22303a" opacity=".55"/>
   <text x="30" y="5" text-anchor="middle" font-family="Georgia,serif" font-size="8" font-weight="700" fill="#22303a" dy="-1"></text></g></svg>
 </button>
-<div id="credit">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.
+<div id="credit"><b>© 2026 DeWitt Hutchins. All rights reserved.</b> <a href="#" id="bLegal">Legal notice</a><br>
+  <span class="long">Made by a neighbor — not an official WLE publication. Check <a href="https://wleonline.org/site/" target="_blank" rel="noopener">wleonline.org</a> for current hours.</span>
   Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, Overture Maps, USGS, U.S. Census.
   <span id="aerial-credit" hidden>Aerial imagery: PEMA / <a href="https://www.pasda.psu.edu/" target="_blank" rel="noopener">PASDA</a> · 2021 · 6-inch source imagery.</span></div>
 <div id="hint">Drag to move · right-drag or two fingers to turn · scroll or pinch to zoom · tap a pin · zoom in for boats, golf carts, deer, the piebald buck and the odd bear</div>
@@ -639,6 +641,10 @@ function openPlace(p){
   panel.classList.add('open'); panel.scrollTop = 0;
   flyTo(p.x + (small ? 0 : 120), p.z + (small ? 140 : 0), 1500);
 }
+const LEGAL = `<div class="sec">Copyright</div><p>© 2026 DeWitt Hutchins. All rights reserved. The design, 3D model, artwork, animations, text and software of this map are original work protected by copyright. No part of it may be copied, reproduced, republished, framed, scraped, adapted or used to build a similar product, in whole or in part, without written permission.</p>
+   <p>Photographs belong to their photographers, who are credited on each one, and are not covered by this notice. The underlying geographic data belongs to its sources and stays under their licences: © OpenStreetMap contributors (Open Database License), Overture Maps Foundation, USGS, the U.S. Census Bureau, and PEMA / PASDA aerial imagery.</p>
+   <div class="sec">Disclaimer</div><p>This map is provided "as is", for general information only, with no warranty of any kind. It is not a survey or a navigation aid, and must not be relied on for property lines, boating, driving or emergencies. Places, names, hours, events and routes may be wrong, out of date or missing. Use it at your own risk; the publisher is not liable for any loss or injury arising from its use.</p>
+   <p>Made by a neighbor. It is not an official publication of Wallenpaupack Lake Estates or its property owners association, and is not sponsored or endorsed by them. All names and trademarks belong to their owners and appear only to identify places.</p>`;
 function openSheet(kick, title, html){
   for (const el of pinEls.values()) el.classList.remove('sel');
   panel.style.setProperty('--c', 'var(--accent)');
@@ -673,6 +679,8 @@ document.getElementById('bInfo').onclick = () => {
     `<div class="sec">Phone</div>${T.map(t => `<div class="tel"><span>${esc(t[0])}</span><a href="tel:${t[1].replace(/[^0-9]/g, '')}">${t[1]}</a></div>`).join('')}
      <div class="sec">Online</div><div class="links">${L.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
      <p class="fine">Office hours: Monday–Saturday, 8:30 AM – 4:30 PM.</p>`);
+};
+document.getElementById('bLegal').onclick = e => { e.preventDefault(); openSheet('Legal', 'Copyright and disclaimer', LEGAL);
 };
 let back = null, placeOpen = false;      // the view you had before opening a place card
 function view(){ const s = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)); return {x: controls.target.x, z: controls.target.z, d: s.radius, az: s.theta}; }

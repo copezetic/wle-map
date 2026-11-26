@@ -29,3 +29,9 @@ neutral ground color, with a Retry control. Switching back to Illustrated
 cancels pending requests and restores the original map.
 
 Serve locally with `python3 -m http.server 8766 --bind 127.0.0.1`.
+
+## Copyright
+
+© 2026 DeWitt Hutchins. All rights reserved. See `LICENSE`. The code, design, models and
+artwork are not open source; photographs belong to their photographers and the map data
+keeps its own licences.
